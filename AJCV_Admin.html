@@ -320,7 +320,7 @@ const API_BASE = 'https://ajcvbackend-test-production.up.railway.app';
     if (document.getElementById('ajcv-test-banner')) return;
     var b = document.createElement('div');
     b.id = 'ajcv-test-banner';
-    b.textContent = '🧪 ENVIRONNEMENT DE TEST · build 26/06-6 — données fictives, sans impact prod';
+    b.textContent = '🧪 ENVIRONNEMENT DE TEST · build 26/06-7 — données fictives, sans impact prod';
     b.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;background:#7c3aed;color:#fff;font:600 13px/1.4 Arial,sans-serif;text-align:center;padding:6px 10px;display:block;box-shadow:0 2px 8px rgba(0,0,0,.3)';
     document.body.appendChild(b); document.body.style.paddingTop='32px';
   };
@@ -416,7 +416,7 @@ async function resetCamion(id){
 }
 async function renderChargements(){
   const c=document.getElementById('content');
-  if(!S._chargeDate) S._chargeDate=new Date().toISOString().slice(0,10);
+  if(!S._chargeDate){ const n=new Date(); S._chargeDate=n.getFullYear()+'-'+('0'+(n.getMonth()+1)).slice(-2)+'-'+('0'+n.getDate()).slice(-2); }
   c.innerHTML=`<div class="card"><label style="font-weight:600">📅 Date <input type="date" id="chargeDate" value="${S._chargeDate}" onchange="majDateCharge(this.value)" style="margin-left:8px;padding:8px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text)"></label> <button class="btn btn-gray btn-sm" onclick="renderChargements()" style="margin-left:8px">🔄 Actualiser</button></div><div id="chargeListe"><div class="loading"><div class="spin"></div></div></div>`;
   let data=null;
   try{ data=await api('GET','/chargement/camion?date='+encodeURIComponent(S._chargeDate)); }catch(_){}

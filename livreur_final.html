@@ -495,6 +495,17 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
   </div>
 </div>
 
+<!-- POPUP RÉCAP PRODUIT (chargement) -->
+<div id="recapModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:10000;align-items:flex-end;justify-content:center">
+  <div style="background:var(--surface);width:100%;max-width:520px;border-radius:18px 18px 0 0;max-height:85vh;display:flex;flex-direction:column;border:1px solid var(--border)">
+    <div style="padding:16px 18px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
+      <div id="recapTitre" style="font-weight:700;font-size:16px">Récap</div>
+      <button onclick="fermerRecap()" style="background:transparent;border:none;color:var(--text2);font-size:22px;cursor:pointer;line-height:1">×</button>
+    </div>
+    <div id="recapBox" style="padding:4px 18px 18px;overflow-y:auto;flex:1"></div>
+  </div>
+</div>
+
 <div id="boissonsModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:10000;align-items:flex-end;justify-content:center">
   <div style="background:var(--surface);width:100%;max-width:520px;border-radius:18px 18px 0 0;max-height:85vh;display:flex;flex-direction:column;border:1px solid var(--border)">
     <div style="padding:16px 18px;border-bottom:1px solid var(--border)">
@@ -526,7 +537,7 @@ const API_BASE = 'https://ajcvbackend-test-production.up.railway.app';
     if (document.getElementById('ajcv-test-banner')) return;
     var b = document.createElement('div');
     b.id = 'ajcv-test-banner';
-    b.textContent = '🧪 ENVIRONNEMENT DE TEST · build 26/06-6 — données fictives, sans impact prod';
+    b.textContent = '🧪 ENVIRONNEMENT DE TEST · build 26/06-7 — données fictives, sans impact prod';
     b.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;background:#7c3aed;color:#fff;font:600 13px/1.4 Arial,sans-serif;text-align:center;padding:6px 10px;display:block;box-shadow:0 2px 8px rgba(0,0,0,.3)';
     document.body.appendChild(b); document.body.style.paddingTop='32px';
   };
@@ -937,6 +948,13 @@ function getDateSelectionnee() {
   // Format JJ/MM/AAAA pour l'API
   const d = new Date(picker.value);
   return ('0'+d.getDate()).slice(-2)+'/'+('0'+(d.getMonth()+1)).slice(-2)+'/'+d.getFullYear();
+}
+function getDateISO(){
+  const picker = document.getElementById('datePicker');
+  if (!picker || !picker.value) { const n=new Date(); return n.getFullYear()+'-'+('0'+(n.getMonth()+1)).slice(-2)+'-'+('0'+n.getDate()).slice(-2); }
+  const d = new Date(picker.value);
+  if (isNaN(d)) { const n=new Date(); return n.getFullYear()+'-'+('0'+(n.getMonth()+1)).slice(-2)+'-'+('0'+n.getDate()).slice(-2); }
+  return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2);
 }
 
 function getJourSelectionne() {
@@ -1351,14 +1369,14 @@ function renderChargement() {
     <div class="kpi-tile"><div class="kpi-val g">${charges}</div><div class="kpi-lbl">Chargées</div></div>
     <div class="kpi-tile"><div class="kpi-val o">${livs.length - charges}</div><div class="kpi-lbl">Restantes</div></div>
     <div class="kpi-tile"><div class="kpi-val b">${totalColis}</div><div class="kpi-lbl">📦 Colis</div></div>
-    <div class="kpi-tile"><div class="kpi-val b">${totalBoissons}</div><div class="kpi-lbl">🥤 Boissons</div></div>
-    <div class="kpi-tile"><div class="kpi-val b">${totalCharbons}</div><div class="kpi-lbl">🔥 Charbons</div></div>${totalPlv?`
-    <div class="kpi-tile"><div class="kpi-val b">${totalPlv}</div><div class="kpi-lbl">🪧 PLV</div></div>`:''}${totalTpe?`
-    <div class="kpi-tile"><div class="kpi-val b">${totalTpe}</div><div class="kpi-lbl">💳 TPE</div></div>`:''}
+    <div class="kpi-tile" onclick="ouvrirRecapProduit('BOISSON')" style="cursor:pointer"><div class="kpi-val b">${totalBoissons}</div><div class="kpi-lbl">🥤 Boissons ▸</div></div>
+    <div class="kpi-tile" onclick="ouvrirRecapProduit('CHARBON')" style="cursor:pointer"><div class="kpi-val b">${totalCharbons}</div><div class="kpi-lbl">🔥 Charbons ▸</div></div>${totalPlv?`
+    <div class="kpi-tile" onclick="ouvrirRecapProduit('PLV')" style="cursor:pointer"><div class="kpi-val b">${totalPlv}</div><div class="kpi-lbl">🪧 PLV ▸</div></div>`:''}${totalTpe?`
+    <div class="kpi-tile" onclick="ouvrirRecapProduit('TPE')" style="cursor:pointer"><div class="kpi-val b">${totalTpe}</div><div class="kpi-lbl">💳 TPE ▸</div></div>`:''}
   </div>`;
 
-  if (state._camionStatutDate !== getDateSelectionnee()) {
-    state._camionStatutDate = getDateSelectionnee();
+  if (state._camionStatutDate !== getDateISO()) {
+    state._camionStatutDate = getDateISO();
     state.camionDuJour = undefined;
     chargerStatutCamion();
   }
@@ -1459,14 +1477,14 @@ function ajusterTpe(id, delta) {
 let _camionPhotos = [];
 function camionConfirme(){ return state.camionDuJour || null; }
 async function chargerStatutCamion(){
-  const d = getDateSelectionnee();
+  const d = getDateISO();
   try {
     const r = await fetch(`${CFG.API_URL}/chargement/camion?date=${encodeURIComponent(d)}&mine=1`, { headers:{'Authorization':`Bearer ${state.token||''}`} });
     const data = await r.json().catch(()=>({}));
     const list = (data && data.chargements) || [];
     state.camionDuJour = list.length ? list[list.length-1] : null;
   } catch(_) { state.camionDuJour = null; }
-  if (state.activeTab==='chargement' && getDateSelectionnee()===d) renderChargement();
+  if (state.activeTab==='chargement' && getDateISO()===d) renderChargement();
 }
 function ouvrirTopCamion(){
   const livs = state.livraisons.filter(l => l.statut !== '✅ Livré');
@@ -1480,6 +1498,31 @@ function ouvrirTopCamion(){
   document.getElementById('topCamionModal').style.display = 'flex';
 }
 function fermerTopCamion(){ document.getElementById('topCamionModal').style.display = 'none'; }
+function detailDe(l, field){ let d=l?l[field]:null; if(typeof d==='string'){ try{ d=JSON.parse(d); }catch(_){ d={}; } } return (d&&typeof d==='object')?d:{}; }
+const RECAP_CFG={
+  BOISSON:{ic:'🥤',label:'Boissons',detail:'boissons_detail',nb:l=>boissonsDe(l)},
+  CHARBON:{ic:'🔥',label:'Charbons',detail:'charbons_detail',nb:l=>charbonsDe(l)},
+  PLV:{ic:'🪧',label:'PLV',detail:'plv_detail',nb:l=>plvDe(l)},
+  TPE:{ic:'💳',label:'TPE',detail:'tpe_detail',nb:l=>tpeDe(l)}
+};
+function ouvrirRecapProduit(cat){
+  const cfg=RECAP_CFG[cat]||RECAP_CFG.BOISSON;
+  const livs=state.livraisons.filter(l=>l.statut!=='✅ Livré');
+  let total=0;
+  const rows=livs.map(l=>{
+    const d=detailDe(l,cfg.detail);
+    const n=cfg.nb(l)||0;
+    if(!n && !Object.keys(d).length) return '';
+    total+=n;
+    const types=Object.keys(d).length?Object.entries(d).map(([t,q])=>`${t}×${q}`).join(', '):(n?String(n):'—');
+    return `<div style="padding:10px 0;border-bottom:1px solid var(--border)"><div style="font-weight:600">${(l.client||'—')}</div><div style="font-size:12px;color:var(--text2)">${(l.ville||'')} · BL ${(l.bl||'—')}</div><div style="margin-top:3px;font-weight:600;color:var(--gold)">${types}</div></div>`;
+  }).filter(Boolean).join('');
+  const t=document.getElementById('recapTitre'); if(t) t.textContent=`${cfg.ic} ${cfg.label} · total ${total}`;
+  document.getElementById('recapBox').innerHTML=rows||`<div style="padding:14px 0;color:var(--text2)">Aucun ${cfg.label.toLowerCase()} sur cette tournée.</div>`;
+  document.getElementById('recapModal').style.display='flex';
+}
+function fermerRecap(){ document.getElementById('recapModal').style.display='none'; }
+
 async function camionPhotoChoisie(input){
   const f = input.files && input.files[0]; if(!f) return;
   try { const b64 = await compresserPhoto(f, 1200, 0.7); _camionPhotos.push(b64); renderCamionThumbs(); }
@@ -1500,14 +1543,14 @@ async function validerTopCamion(){
     nb_plv: parseInt(document.getElementById('tc-plv').value)||0,
     nb_tpe: parseInt(document.getElementById('tc-tpe').value)||0,
     photos: _camionPhotos,
-    date: getDateSelectionnee(),
+    date: getDateISO(),
   };
   try {
     const resp = await fetch(`${CFG.API_URL}/chargement/camion`, { method:'POST', headers:{'Content-Type':'application/json','Authorization':`Bearer ${state.token||''}`}, body: JSON.stringify(body) });
     const data = await resp.json().catch(()=>({}));
     if(!resp.ok || !data.success) throw new Error(data.error||'Erreur serveur');
     state.camionDuJour = { nb_boissons:body.nb_boissons, nb_charbons:body.nb_charbons, nb_plv:body.nb_plv, nb_tpe:body.nb_tpe, created_at:new Date().toISOString() };
-    state._camionStatutDate = getDateSelectionnee();
+    state._camionStatutDate = getDateISO();
     fermerTopCamion();
     renderChargement();
     showToast('✅ Camion confirmé','success');

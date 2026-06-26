@@ -1,7 +1,16 @@
 {
-  "version": "2026.06.26.6",
+  "version": "2026.06.26.7",
   "app": "AJCV Logistique — TEST",
   "historique": [
+    {
+      "v": "2026.06.26.7",
+      "date": "26/06/2026",
+      "titre": "Correctif verrou camion + récap produit cliquable",
+      "notes": [
+        "🔒 Correctif : le camion confirmé reste bien verrouillé (un décalage de format de date empêchait le verrou de tenir).",
+        "👆 Livreur : dans l'onglet Chargement, cliquer sur un total 🥤 / 🔥 / 🪧 / 💳 ouvre le détail « quel client, combien, par type »."
+      ]
+    },
     {
       "v": "2026.06.26.6",
       "date": "26/06/2026",
