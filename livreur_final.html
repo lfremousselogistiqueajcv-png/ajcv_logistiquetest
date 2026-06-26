@@ -470,6 +470,31 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 <div class="toast" id="toast"></div>
 
 <!-- POPUP DÉTAIL BOISSONS (chargement + signature) -->
+<!-- POPUP TOP CAMION (chargement : comptage + photos) -->
+<div id="topCamionModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:10000;align-items:flex-end;justify-content:center">
+  <div style="background:var(--surface);width:100%;max-width:520px;border-radius:18px 18px 0 0;max-height:90vh;display:flex;flex-direction:column;border:1px solid var(--border)">
+    <div style="padding:16px 18px;border-bottom:1px solid var(--border)">
+      <div style="font-weight:700;font-size:16px">🚚 Confirmer le chargement du camion</div>
+      <div style="font-size:13px;color:var(--text2);margin-top:2px">Corrige si besoin les quantités réellement chargées, ajoute au moins une photo.</div>
+    </div>
+    <div style="padding:14px 18px;overflow-y:auto;flex:1">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <label style="font-size:13px;color:var(--text2)">🥤 Boissons<input type="number" min="0" inputmode="numeric" id="tc-boissons" style="width:100%;margin-top:4px;padding:10px;border-radius:10px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:16px;font-weight:700;box-sizing:border-box"></label>
+        <label style="font-size:13px;color:var(--text2)">🔥 Charbons<input type="number" min="0" inputmode="numeric" id="tc-charbons" style="width:100%;margin-top:4px;padding:10px;border-radius:10px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:16px;font-weight:700;box-sizing:border-box"></label>
+        <label style="font-size:13px;color:var(--text2)">🪧 PLV<input type="number" min="0" inputmode="numeric" id="tc-plv" style="width:100%;margin-top:4px;padding:10px;border-radius:10px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:16px;font-weight:700;box-sizing:border-box"></label>
+        <label style="font-size:13px;color:var(--text2)">💳 TPE<input type="number" min="0" inputmode="numeric" id="tc-tpe" style="width:100%;margin-top:4px;padding:10px;border-radius:10px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:16px;font-weight:700;box-sizing:border-box"></label>
+      </div>
+      <input type="file" accept="image/*" capture="environment" id="tc-file" style="display:none" onchange="camionPhotoChoisie(this)">
+      <button onclick="document.getElementById('tc-file').click()" style="margin-top:14px;width:100%;padding:12px;border-radius:10px;border:1px dashed var(--gold);background:transparent;color:var(--gold);font-weight:700;cursor:pointer">📷 Ajouter une photo</button>
+      <div id="tc-thumbs" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:10px"></div>
+    </div>
+    <div style="padding:12px 18px;border-top:1px solid var(--border);display:flex;gap:10px;justify-content:flex-end">
+      <button onclick="fermerTopCamion()" style="padding:10px 16px;border-radius:10px;border:1px solid var(--border);background:transparent;color:var(--text);font-weight:600;cursor:pointer">Annuler</button>
+      <button id="tc-valider" onclick="validerTopCamion()" style="padding:10px 18px;border-radius:10px;border:none;background:var(--green);color:#fff;font-weight:700;cursor:pointer">Valider le camion ✓</button>
+    </div>
+  </div>
+</div>
+
 <div id="boissonsModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:10000;align-items:flex-end;justify-content:center">
   <div style="background:var(--surface);width:100%;max-width:520px;border-radius:18px 18px 0 0;max-height:85vh;display:flex;flex-direction:column;border:1px solid var(--border)">
     <div style="padding:16px 18px;border-bottom:1px solid var(--border)">
@@ -493,7 +518,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 // CONFIG — À modifier
 // ════════════════════════════════════════
 // ════════════════════════════════════════
-// ENVIRONNEMENT DE TEST — backend de test, données fictives. Build affiché dans le bandeau.
+// ENVIRONNEMENT DE TEST — backend de test, données fictives.
 // ════════════════════════════════════════
 const API_BASE = 'https://ajcvbackend-test-production.up.railway.app';
 (function(){
@@ -501,14 +526,12 @@ const API_BASE = 'https://ajcvbackend-test-production.up.railway.app';
     if (document.getElementById('ajcv-test-banner')) return;
     var b = document.createElement('div');
     b.id = 'ajcv-test-banner';
-    b.textContent = '🧪 ENVIRONNEMENT DE TEST · build 26/06-1 — données fictives, sans impact prod';
+    b.textContent = '🧪 ENVIRONNEMENT DE TEST · build 26/06-4 — données fictives, sans impact prod';
     b.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;background:#7c3aed;color:#fff;font:600 13px/1.4 Arial,sans-serif;text-align:center;padding:6px 10px;display:block;box-shadow:0 2px 8px rgba(0,0,0,.3)';
-    document.body.appendChild(b);
-    document.body.style.paddingTop = '32px';
+    document.body.appendChild(b); document.body.style.paddingTop='32px';
   };
   if (document.body) show(); else document.addEventListener('DOMContentLoaded', show);
 })();
-
 const CFG = {
   API_URL:  API_BASE,
   MAP_TILES_KEY: 'AIzaSyANCuTbj18tPJ9ZzreJpRgsR9j-Ijt-26g',  // Clé Google Map Tiles (restreinte: sites AJCV + Map Tiles API)
@@ -1333,6 +1356,13 @@ function renderChargement() {
     <div class="kpi-tile"><div class="kpi-val b">${totalTpe}</div><div class="kpi-lbl">💳 TPE</div></div>`:''}
   </div>`;
 
+  const _tousCharges = charges === livs.length && livs.length > 0;
+  const _confCamion = camionConfirme();
+  if (_tousCharges && !_confCamion) {
+    html += `<div style="margin:0 14px 12px;padding:14px;border-radius:12px;background:rgba(255,179,0,.12);border:1px solid var(--gold);text-align:center"><div style="font-weight:700;margin-bottom:8px">🚚 Tout est chargé !</div><button onclick="ouvrirTopCamion()" style="width:100%;padding:12px;border-radius:10px;border:none;background:var(--gold);color:#1a1a1a;font-weight:700;font-size:15px;cursor:pointer">✅ Confirmer le camion (comptage + photo)</button></div>`;
+  } else if (_confCamion) {
+    html += `<div style="margin:0 14px 12px;padding:12px 14px;border-radius:12px;background:rgba(34,197,94,.12);border:1px solid var(--green);font-weight:600">✅ Camion confirmé${_confCamion.heure?` à ${new Date(_confCamion.heure).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})}`:''} · 🥤${_confCamion.nb_boissons||0} 🔥${_confCamion.nb_charbons||0} 🪧${_confCamion.nb_plv||0} 💳${_confCamion.nb_tpe||0} <button onclick="ouvrirTopCamion()" style="margin-left:6px;background:transparent;border:1px solid var(--border);color:var(--text2);border-radius:8px;padding:4px 8px;font-size:12px;cursor:pointer">Modifier</button></div>`;
+  }
   html += `<div class="optimize-bar"><div class="optimize-info"><strong>🚚 Chargement du camion</strong>
     Coche chaque commande chargée, et n'oublie pas boissons et charbons</div>
     <button class="btn-optimize" onclick="toutCharger()">✓ Tout</button></div>`;
@@ -1417,6 +1447,56 @@ function ajusterTpe(id, delta) {
   l.nb_tpe = Math.max(0, tpeDe(l) + delta);
   renderChargement();
   envoyerChargement(l, estCharge(l));
+}
+
+let _camionPhotos = [];
+function camionConfirmKey(){ return 'ajcv_camion_' + (state.livreur||'') + '_' + getDateSelectionnee(); }
+function camionConfirme(){ try { return JSON.parse(localStorage.getItem(camionConfirmKey())||'null'); } catch(_){ return null; } }
+function ouvrirTopCamion(){
+  const livs = state.livraisons.filter(l => l.statut !== '✅ Livré');
+  document.getElementById('tc-boissons').value = livs.reduce((s,l)=>s+boissonsDe(l),0);
+  document.getElementById('tc-charbons').value = livs.reduce((s,l)=>s+charbonsDe(l),0);
+  document.getElementById('tc-plv').value = livs.reduce((s,l)=>s+plvDe(l),0);
+  document.getElementById('tc-tpe').value = livs.reduce((s,l)=>s+tpeDe(l),0);
+  _camionPhotos = [];
+  document.getElementById('tc-thumbs').innerHTML = '';
+  const btn = document.getElementById('tc-valider'); if(btn){ btn.disabled=false; btn.textContent='Valider le camion ✓'; }
+  document.getElementById('topCamionModal').style.display = 'flex';
+}
+function fermerTopCamion(){ document.getElementById('topCamionModal').style.display = 'none'; }
+async function camionPhotoChoisie(input){
+  const f = input.files && input.files[0]; if(!f) return;
+  try { const b64 = await compresserPhoto(f, 1200, 0.7); _camionPhotos.push(b64); renderCamionThumbs(); }
+  catch(_) { showToast('❌ Photo illisible',''); }
+  input.value='';
+}
+function renderCamionThumbs(){
+  const el = document.getElementById('tc-thumbs'); if(!el) return;
+  el.innerHTML = _camionPhotos.map((u,i)=>`<div style="position:relative"><img src="${u}" style="width:70px;height:70px;object-fit:cover;border-radius:8px;border:1px solid var(--border)"><div onclick="retirerCamionPhoto(${i})" style="position:absolute;top:-6px;right:-6px;background:#ef4444;color:#fff;width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;cursor:pointer">×</div></div>`).join('');
+}
+function retirerCamionPhoto(i){ _camionPhotos.splice(i,1); renderCamionThumbs(); }
+async function validerTopCamion(){
+  if(!_camionPhotos.length){ showToast('📷 Ajoute au moins une photo',''); return; }
+  const btn = document.getElementById('tc-valider'); if(btn){ btn.disabled=true; btn.textContent='Envoi…'; }
+  const body = {
+    nb_boissons: parseInt(document.getElementById('tc-boissons').value)||0,
+    nb_charbons: parseInt(document.getElementById('tc-charbons').value)||0,
+    nb_plv: parseInt(document.getElementById('tc-plv').value)||0,
+    nb_tpe: parseInt(document.getElementById('tc-tpe').value)||0,
+    photos: _camionPhotos,
+  };
+  try {
+    const resp = await fetch(`${CFG.API_URL}/chargement/camion`, { method:'POST', headers:{'Content-Type':'application/json','Authorization':`Bearer ${state.token||''}`}, body: JSON.stringify(body) });
+    const data = await resp.json().catch(()=>({}));
+    if(!resp.ok || !data.success) throw new Error(data.error||'Erreur serveur');
+    localStorage.setItem(camionConfirmKey(), JSON.stringify({ nb_boissons:body.nb_boissons, nb_charbons:body.nb_charbons, nb_plv:body.nb_plv, nb_tpe:body.nb_tpe, heure:new Date().toISOString() }));
+    fermerTopCamion();
+    renderChargement();
+    showToast('✅ Camion confirmé','success');
+  } catch(e) {
+    if(btn){ btn.disabled=false; btn.textContent='Valider le camion ✓'; }
+    showToast('❌ '+(e.message||'Erreur'),'');
+  }
 }
 
 function toutCharger() {
