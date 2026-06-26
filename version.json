@@ -1,7 +1,17 @@
 {
-  "version": "2026.06.26.5",
+  "version": "2026.06.26.6",
   "app": "AJCV Logistique — TEST",
   "historique": [
+    {
+      "v": "2026.06.26.6",
+      "date": "26/06/2026",
+      "titre": "Camion verrouillé après validation + onglet Chargement (admin)",
+      "notes": [
+        "🔒 Livreur : une fois le camion confirmé, le comptage est verrouillé (plus de modification possible côté livreur).",
+        "🚚 Admin : nouvel onglet « Chargement » — traçabilité de tous les camions confirmés par date, avec photos.",
+        "♻️ Admin : bouton « Permettre de recommencer » pour rouvrir un camion (le livreur peut alors refaire son comptage + photos)."
+      ]
+    },
     {
       "v": "2026.06.26.5",
       "date": "26/06/2026",

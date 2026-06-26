@@ -128,6 +128,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
       <div class="nav-tab active" data-tab="livraisons" onclick="go('livraisons')">📦 Livraisons</div>
       <div class="nav-tab" data-tab="prep" onclick="go('prep')">🧰 Préparation</div>
       <div class="nav-tab" data-tab="plan" onclick="go('plan')">🗺️ Plan de tournée</div>
+      <div class="nav-tab" data-tab="chargement" onclick="go('chargement')">🚚 Chargement</div>
       <div class="nav-tab" data-tab="zones" onclick="go('zones')">📍 Zones</div>
       <div class="nav-tab" data-tab="impLiv" onclick="go('impLiv')">📥 Import Livraisons</div>
       <div class="nav-tab" data-tab="impCli" onclick="go('impCli')">📥 Import Clients</div>
@@ -319,13 +320,12 @@ const API_BASE = 'https://ajcvbackend-test-production.up.railway.app';
     if (document.getElementById('ajcv-test-banner')) return;
     var b = document.createElement('div');
     b.id = 'ajcv-test-banner';
-    b.textContent = '🧪 ENVIRONNEMENT DE TEST · build 26/06-3 — données fictives, sans impact prod';
+    b.textContent = '🧪 ENVIRONNEMENT DE TEST · build 26/06-6 — données fictives, sans impact prod';
     b.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;background:#7c3aed;color:#fff;font:600 13px/1.4 Arial,sans-serif;text-align:center;padding:6px 10px;display:block;box-shadow:0 2px 8px rgba(0,0,0,.3)';
     document.body.appendChild(b); document.body.style.paddingTop='32px';
   };
   if (document.body) show(); else document.addEventListener('DOMContentLoaded', show);
 })();
-
 const API = API_BASE;
 const APP_VERSION = 'v3-clean-2026';
 let S = { token:'', login:'', prenom:'', role:'', tab:'livraisons' };
@@ -404,7 +404,40 @@ function go(tab){
   else if(tab==='kpi') renderKPI();
   else if(tab==='odoo') renderImportsOdoo();
   else if(tab==='zones') renderZones();
+  else if(tab==='chargement') renderChargements();
 }
+
+function majDateCharge(v){ S._chargeDate=v; renderChargements(); }
+async function resetCamion(id){
+  if(!confirm('Permettre au livreur de recommencer le chargement de ce camion ?\n\nLe camion confirmé sera supprimé : le livreur pourra refaire son comptage et ses photos.')) return;
+  const r=await api('DELETE','/chargement/camion/'+id).catch(()=>null);
+  if(r&&r.success){ toast('♻️ Le livreur peut recommencer'); renderChargements(); }
+  else toast('❌ '+((r&&r.error)||'Erreur'));
+}
+async function renderChargements(){
+  const c=document.getElementById('content');
+  if(!S._chargeDate) S._chargeDate=new Date().toISOString().slice(0,10);
+  c.innerHTML=`<div class="card"><label style="font-weight:600">📅 Date <input type="date" id="chargeDate" value="${S._chargeDate}" onchange="majDateCharge(this.value)" style="margin-left:8px;padding:8px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text)"></label> <button class="btn btn-gray btn-sm" onclick="renderChargements()" style="margin-left:8px">🔄 Actualiser</button></div><div id="chargeListe"><div class="loading"><div class="spin"></div></div></div>`;
+  let data=null;
+  try{ data=await api('GET','/chargement/camion?date='+encodeURIComponent(S._chargeDate)); }catch(_){}
+  const liste=(data&&data.chargements)||[];
+  const el=document.getElementById('chargeListe'); if(!el) return;
+  if(!liste.length){ el.innerHTML='<div class="card"><p class="muted" style="margin:0">Aucun camion confirmé pour cette date.</p></div>'; return; }
+  el.innerHTML=liste.map(c=>{
+    const h=c.created_at?new Date(c.created_at).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}):'';
+    let photos=c.photos; if(typeof photos==='string'){ try{ photos=JSON.parse(photos); }catch(_){ photos=[]; } } if(!Array.isArray(photos)) photos=[];
+    const ph=photos.map(u=>`<img src="${esc(String(u))}" onclick="window.open('${String(u).replace(/'/g,'%27')}','_blank')" style="width:88px;height:88px;object-fit:cover;border-radius:8px;border:1px solid var(--border);cursor:pointer">`).join('');
+    return `<div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+        <div style="font-size:16px"><b>🚚 ${esc(c.livreur||'—')}</b> <span class="muted">${esc(c.date_chargement||'')}${h?' · '+h:''}</span></div>
+        <button class="btn btn-red btn-sm" onclick="resetCamion('${esc(String(c.id))}')">♻️ Permettre de recommencer</button>
+      </div>
+      <div style="margin-top:10px;font-weight:700;font-size:15px">🥤 ${c.nb_boissons||0} &nbsp; 🔥 ${c.nb_charbons||0} &nbsp; 🪧 ${c.nb_plv||0} &nbsp; 💳 ${c.nb_tpe||0}</div>
+      ${ph?`<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:12px">${ph}</div>`:'<p class="muted" style="margin-top:10px">Aucune photo.</p>'}
+    </div>`;
+  }).join('');
+}
+
 
 // ════════════════════════════════════════════════════════════════════════════
 // ZONES — visualisation du découpage CP→zone (source : route /zones = le code)

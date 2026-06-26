@@ -526,7 +526,7 @@ const API_BASE = 'https://ajcvbackend-test-production.up.railway.app';
     if (document.getElementById('ajcv-test-banner')) return;
     var b = document.createElement('div');
     b.id = 'ajcv-test-banner';
-    b.textContent = '🧪 ENVIRONNEMENT DE TEST · build 26/06-4 — données fictives, sans impact prod';
+    b.textContent = '🧪 ENVIRONNEMENT DE TEST · build 26/06-6 — données fictives, sans impact prod';
     b.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;background:#7c3aed;color:#fff;font:600 13px/1.4 Arial,sans-serif;text-align:center;padding:6px 10px;display:block;box-shadow:0 2px 8px rgba(0,0,0,.3)';
     document.body.appendChild(b); document.body.style.paddingTop='32px';
   };
@@ -1081,6 +1081,7 @@ async function chargerLivraisons() {
 // ════════════════════════════════════════
 function switchTab(tab) {
   state.activeTab = tab;
+  if (tab === 'chargement') state._camionStatutDate = null;
   document.querySelectorAll('.tab').forEach((t,i) => {
     t.classList.toggle('active', ['livraisons','chargement','carte','done'][i] === tab);
   });
@@ -1356,12 +1357,18 @@ function renderChargement() {
     <div class="kpi-tile"><div class="kpi-val b">${totalTpe}</div><div class="kpi-lbl">💳 TPE</div></div>`:''}
   </div>`;
 
+  if (state._camionStatutDate !== getDateSelectionnee()) {
+    state._camionStatutDate = getDateSelectionnee();
+    state.camionDuJour = undefined;
+    chargerStatutCamion();
+  }
   const _tousCharges = charges === livs.length && livs.length > 0;
-  const _confCamion = camionConfirme();
-  if (_tousCharges && !_confCamion) {
+  const _camionLoading = state.camionDuJour === undefined;
+  const _confCamion = state.camionDuJour || null;
+  if (!_camionLoading && _tousCharges && !_confCamion) {
     html += `<div style="margin:0 14px 12px;padding:14px;border-radius:12px;background:rgba(255,179,0,.12);border:1px solid var(--gold);text-align:center"><div style="font-weight:700;margin-bottom:8px">🚚 Tout est chargé !</div><button onclick="ouvrirTopCamion()" style="width:100%;padding:12px;border-radius:10px;border:none;background:var(--gold);color:#1a1a1a;font-weight:700;font-size:15px;cursor:pointer">✅ Confirmer le camion (comptage + photo)</button></div>`;
   } else if (_confCamion) {
-    html += `<div style="margin:0 14px 12px;padding:12px 14px;border-radius:12px;background:rgba(34,197,94,.12);border:1px solid var(--green);font-weight:600">✅ Camion confirmé${_confCamion.heure?` à ${new Date(_confCamion.heure).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})}`:''} · 🥤${_confCamion.nb_boissons||0} 🔥${_confCamion.nb_charbons||0} 🪧${_confCamion.nb_plv||0} 💳${_confCamion.nb_tpe||0} <button onclick="ouvrirTopCamion()" style="margin-left:6px;background:transparent;border:1px solid var(--border);color:var(--text2);border-radius:8px;padding:4px 8px;font-size:12px;cursor:pointer">Modifier</button></div>`;
+    html += `<div style="margin:0 14px 12px;padding:12px 14px;border-radius:12px;background:rgba(34,197,94,.12);border:1px solid var(--green);font-weight:600">✅ Camion confirmé${_confCamion.created_at?` à ${new Date(_confCamion.created_at).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})}`:''} · 🥤${_confCamion.nb_boissons||0} 🔥${_confCamion.nb_charbons||0} 🪧${_confCamion.nb_plv||0} 💳${_confCamion.nb_tpe||0}<div style="font-weight:500;font-size:12px;color:var(--text2);margin-top:4px">🔒 Validé — vois l'admin pour recommencer.</div></div>`;
   }
   html += `<div class="optimize-bar"><div class="optimize-info"><strong>🚚 Chargement du camion</strong>
     Coche chaque commande chargée, et n'oublie pas boissons et charbons</div>
@@ -1450,8 +1457,17 @@ function ajusterTpe(id, delta) {
 }
 
 let _camionPhotos = [];
-function camionConfirmKey(){ return 'ajcv_camion_' + (state.livreur||'') + '_' + getDateSelectionnee(); }
-function camionConfirme(){ try { return JSON.parse(localStorage.getItem(camionConfirmKey())||'null'); } catch(_){ return null; } }
+function camionConfirme(){ return state.camionDuJour || null; }
+async function chargerStatutCamion(){
+  const d = getDateSelectionnee();
+  try {
+    const r = await fetch(`${CFG.API_URL}/chargement/camion?date=${encodeURIComponent(d)}&mine=1`, { headers:{'Authorization':`Bearer ${state.token||''}`} });
+    const data = await r.json().catch(()=>({}));
+    const list = (data && data.chargements) || [];
+    state.camionDuJour = list.length ? list[list.length-1] : null;
+  } catch(_) { state.camionDuJour = null; }
+  if (state.activeTab==='chargement' && getDateSelectionnee()===d) renderChargement();
+}
 function ouvrirTopCamion(){
   const livs = state.livraisons.filter(l => l.statut !== '✅ Livré');
   document.getElementById('tc-boissons').value = livs.reduce((s,l)=>s+boissonsDe(l),0);
@@ -1484,12 +1500,14 @@ async function validerTopCamion(){
     nb_plv: parseInt(document.getElementById('tc-plv').value)||0,
     nb_tpe: parseInt(document.getElementById('tc-tpe').value)||0,
     photos: _camionPhotos,
+    date: getDateSelectionnee(),
   };
   try {
     const resp = await fetch(`${CFG.API_URL}/chargement/camion`, { method:'POST', headers:{'Content-Type':'application/json','Authorization':`Bearer ${state.token||''}`}, body: JSON.stringify(body) });
     const data = await resp.json().catch(()=>({}));
     if(!resp.ok || !data.success) throw new Error(data.error||'Erreur serveur');
-    localStorage.setItem(camionConfirmKey(), JSON.stringify({ nb_boissons:body.nb_boissons, nb_charbons:body.nb_charbons, nb_plv:body.nb_plv, nb_tpe:body.nb_tpe, heure:new Date().toISOString() }));
+    state.camionDuJour = { nb_boissons:body.nb_boissons, nb_charbons:body.nb_charbons, nb_plv:body.nb_plv, nb_tpe:body.nb_tpe, created_at:new Date().toISOString() };
+    state._camionStatutDate = getDateSelectionnee();
     fermerTopCamion();
     renderChargement();
     showToast('✅ Camion confirmé','success');
