@@ -163,7 +163,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 
 <script>
 // ════════════════════════════════════════
-// ENVIRONNEMENT DE TEST — backend de test, données fictives. Build affiché dans le bandeau.
+// ENVIRONNEMENT DE TEST — backend de test, données fictives.
 // ════════════════════════════════════════
 const API_BASE = 'https://ajcvbackend-test-production.up.railway.app';
 (function(){
@@ -171,10 +171,9 @@ const API_BASE = 'https://ajcvbackend-test-production.up.railway.app';
     if (document.getElementById('ajcv-test-banner')) return;
     var b = document.createElement('div');
     b.id = 'ajcv-test-banner';
-    b.textContent = '🧪 ENVIRONNEMENT DE TEST · build 26/06-1 — données fictives, sans impact prod';
+    b.textContent = '🧪 ENVIRONNEMENT DE TEST · build 26/06-2 — données fictives, sans impact prod';
     b.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;background:#7c3aed;color:#fff;font:600 13px/1.4 Arial,sans-serif;text-align:center;padding:6px 10px;display:block;box-shadow:0 2px 8px rgba(0,0,0,.3)';
-    document.body.appendChild(b);
-    document.body.style.paddingTop = '32px';
+    document.body.appendChild(b); document.body.style.paddingTop='32px';
   };
   if (document.body) show(); else document.addEventListener('DOMContentLoaded', show);
 })();
@@ -335,7 +334,7 @@ function carteCommande(l, volet){
   const search=(String(l.client_nom||l.client||'')+' '+String(l.ville||'')+' '+String(l.bl||'')).toLowerCase().replace(/"/g,'&quot;');
   let inner=`<div class="c-top"><div><div class="c-client">${esc(l.client_nom||l.client||'')}</div><div class="c-sub">${esc(l.ville||'')} · BL ${esc(l.bl||'—')}</div></div>`;
   if(volet==='prepare'){
-    inner+=`<span class="c-badge b-done">✅ Préparé</span></div><div class="c-qte">${qteTxt}</div>${l.date_preparation?`<div class="c-sub" style="margin-top:4px;color:#059669">🕒 préparée le ${heurePrep(l.date_preparation)}</div>`:''}`;
+    inner+=`<span class="c-badge b-done">✅ Préparé</span></div><div class="c-qte">${qteTxt}</div>${l.date_preparation?`<div class="c-sub" style="margin-top:4px;color:#059669">🕒 préparée le ${heurePrep(l.date_preparation)}${l.prepare_par?` par ${esc(l.prepare_par)}`:''}</div>`:''}`;
     const _ph=photosDe(l);
     if(_ph.length) inner+=`<div class="thumbs-wrap">`+_ph.map(u=>`<img class="thumb-g" src="${u}" onclick="agrandir('${u.replace(/'/g,'%27')}')" alt="photo">`).join('')+`</div>`;
     return `<div class="card done" data-search="${search}">${inner}</div>`;
