@@ -1,7 +1,16 @@
 {
-  "version": "2026.06.26.4",
+  "version": "2026.06.26.5",
   "app": "AJCV Logistique — TEST",
   "historique": [
+    {
+      "v": "2026.06.26.5",
+      "date": "26/06/2026",
+      "titre": "Préparateur : menus charbons / PLV / TPE (comme boissons)",
+      "notes": [
+        "📦 Dans l'appli préparation, charbons, PLV et TPE se saisissent par menu de sélection (type + quantité), comme les boissons.",
+        "Le résumé de chaque commande affiche le détail 🥤 / 🔥 / 🪧 / 💳."
+      ]
+    },
     {
       "v": "2026.06.26.4",
       "date": "26/06/2026",
