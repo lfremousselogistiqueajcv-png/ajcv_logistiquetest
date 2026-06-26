@@ -132,7 +132,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
       <div class="nav-tab" data-tab="impLiv" onclick="go('impLiv')">📥 Import Livraisons</div>
       <div class="nav-tab" data-tab="impCli" onclick="go('impCli')">📥 Import Clients</div>
       <div class="nav-tab" data-tab="clients" onclick="go('clients')">🏪 Clients</div>
-      <div class="nav-tab" data-tab="boissons" onclick="go('boissons')">🥤 Boissons</div>
+      <div class="nav-tab" data-tab="boissons" onclick="go('boissons')">📦 Produits</div>
       <div class="nav-tab" data-tab="users" onclick="go('users')">🔐 Utilisateurs</div>
       <div class="nav-tab" data-tab="docs" onclick="go('docs')">📄 Documents</div>
       <div class="nav-tab" data-tab="flotte" onclick="go('flotte')">🚐 Flotte</div>
@@ -1436,51 +1436,73 @@ function pageClients(delta){
 // ════════════════════════════════════════════════════════════════════════════
 // BOISSONS — catalogue des références (affichées dans l'appli livreur)
 // ════════════════════════════════════════════════════════════════════════════
-let _boissons = null;
+let _boissons = null;            // cache catégorie BOISSON (utilisé par les sélecteurs existants)
+let _prodCat  = 'BOISSON';
+let _prodList = [];
+const PROD_CATS = [
+  {cat:'BOISSON', label:'🥤 Boissons', ex:'SAMBO'},
+  {cat:'CHARBON', label:'🔥 Charbons', ex:'CHARBON 1'},
+  {cat:'PLV',     label:'🪧 PLV',      ex:'PLV 1'},
+  {cat:'TPE',     label:'💳 TPE',      ex:'TPE 1'},
+];
 async function renderBoissons(){
-  const d = await api('GET','/boissons').catch(()=>({boissons:[]}));
-  _boissons = d.boissons || [];
+  const tabs = PROD_CATS.map(c=>`<button class="btn btn-sm" onclick="choisirProdCat('${c.cat}')" style="${c.cat===_prodCat?'background:var(--gold);color:#1a1a1a;font-weight:700':'background:#e2e8f0;color:#475569'}">${c.label}</button>`).join(' ');
   document.getElementById('content').innerHTML = `
     <div class="card">
-      <h3>🥤 Références boissons (${_boissons.length})</h3>
-      <p class="muted" style="margin:6px 0 14px">Ces références apparaissent dans l'appli livreur (au chargement et à la signature). Ajoute, renomme ou désactive-les ici — la liste se met à jour côté livreur.</p>
-      <div style="display:flex;gap:8px;margin-bottom:16px">
-        <input id="bo-nom" placeholder="Nom de la boisson (ex: SAMBO)" style="flex:1" onkeydown="if(event.key==='Enter')ajouterBoisson()">
-        <button class="btn btn-green" onclick="ajouterBoisson()">➕ Ajouter</button>
-      </div>
-      <div class="table-wrap"><table>
-        <thead><tr><th>Nom</th><th style="width:70px;text-align:center">Actif</th><th style="width:60px"></th></tr></thead>
-        <tbody>${_boissons.map(b=>`<tr>
-          <td><input value="${esc(b.nom)}" onchange="renommerBoisson('${b.id}',this.value)" style="width:100%;background:transparent;border:1px solid transparent;color:var(--text);padding:5px 7px;border-radius:6px;font-weight:600" onfocus="this.style.borderColor='var(--gold)'" onblur="this.style.borderColor='transparent'"></td>
-          <td style="text-align:center"><input type="checkbox" ${b.actif!==false?'checked':''} onchange="toggleBoissonActif('${b.id}',this.checked)"></td>
-          <td><button class="btn btn-red btn-sm" onclick="supprimerBoisson('${b.id}','${esc(b.nom).replace(/'/g,"\\'")}')">🗑️</button></td>
-        </tr>`).join('')}</tbody>
-      </table></div>
-      ${_boissons.length===0?'<p class="muted" style="margin-top:12px">Aucune référence pour l\'instant. Ajoute ta première boisson ci-dessus.</p>':''}
+      <h3>📦 Produits — références</h3>
+      <p class="muted" style="margin:6px 0 12px">Gère les références par catégorie, comme les boissons. Elles apparaissent dans les apps (chargement, signature, préparation).</p>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px">${tabs}</div>
+      <div id="prod-zone"><div class="loading">Chargement…</div></div>
     </div>`;
+  renderProdCat(_prodCat);
+}
+function choisirProdCat(cat){ _prodCat = cat; renderBoissons(); }
+async function renderProdCat(cat){
+  const d = await api('GET','/boissons?categorie='+encodeURIComponent(cat)).catch(()=>({boissons:[]}));
+  _prodList = d.boissons || [];
+  if (cat === 'BOISSON') _boissons = _prodList;
+  const meta = PROD_CATS.find(c=>c.cat===cat) || {label:cat, ex:''};
+  const zone = document.getElementById('prod-zone');
+  if(!zone) return;
+  zone.innerHTML = `
+    <h4 style="margin:0 0 10px">${meta.label} (${_prodList.length})</h4>
+    <div style="display:flex;gap:8px;margin-bottom:16px">
+      <input id="bo-nom" placeholder="Nom (ex: ${meta.ex})" style="flex:1" onkeydown="if(event.key==='Enter')ajouterBoisson()">
+      <button class="btn btn-green" onclick="ajouterBoisson()">➕ Ajouter</button>
+    </div>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Nom</th><th style="width:70px;text-align:center">Actif</th><th style="width:60px"></th></tr></thead>
+      <tbody>${_prodList.map(b=>`<tr>
+        <td><input value="${esc(b.nom)}" onchange="renommerBoisson('${b.id}',this.value)" style="width:100%;background:transparent;border:1px solid transparent;color:var(--text);padding:5px 7px;border-radius:6px;font-weight:600" onfocus="this.style.borderColor='var(--gold)'" onblur="this.style.borderColor='transparent'"></td>
+        <td style="text-align:center"><input type="checkbox" ${b.actif!==false?'checked':''} onchange="toggleBoissonActif('${b.id}',this.checked)"></td>
+        <td><button class="btn btn-red btn-sm" onclick="supprimerBoisson('${b.id}','${esc(b.nom).replace(/'/g,"\\'")}')">🗑️</button></td>
+      </tr>`).join('')}</tbody>
+    </table></div>
+    ${_prodList.length===0?`<p class="muted" style="margin-top:12px">Aucune référence ${meta.label}. Ajoute la première ci-dessus.</p>`:''}`;
 }
 async function ajouterBoisson(){
   const nom=(document.getElementById('bo-nom').value||'').trim();
   if(!nom){ toast('⚠️ Entre un nom'); return; }
-  const r=await api('POST','/boissons',{nom, ordre:(_boissons?_boissons.length:0)+1}).catch(()=>null);
-  if(r&&r.success){ document.getElementById('bo-nom').value=''; toast('✅ Boisson ajoutée'); renderBoissons(); }
+  const r=await api('POST','/boissons',{nom, categorie:_prodCat, ordre:(_prodList?_prodList.length:0)+1}).catch(()=>null);
+  if(r&&r.success){ document.getElementById('bo-nom').value=''; toast('✅ Ajouté'); renderProdCat(_prodCat); }
   else toast('❌ '+((r&&r.error)||'Erreur (doublon ?)'));
 }
 async function renommerBoisson(id,nom){
   nom=(nom||'').trim(); if(!nom) return;
   await api('PATCH','/boissons/'+id,{nom}).then(()=>toast('✏️ Renommé'),()=>toast('❌ Erreur'));
-  if(_boissons){ const b=_boissons.find(x=>String(x.id)===String(id)); if(b) b.nom=nom; }
+  const b=(_prodList||[]).find(x=>String(x.id)===String(id)); if(b) b.nom=nom;
 }
 async function toggleBoissonActif(id,actif){
-  await api('PATCH','/boissons/'+id,{actif}).then(()=>toast(actif?'✅ Activée':'🚫 Désactivée'),()=>toast('❌ Erreur'));
-  if(_boissons){ const b=_boissons.find(x=>String(x.id)===String(id)); if(b) b.actif=actif; }
+  await api('PATCH','/boissons/'+id,{actif}).then(()=>toast(actif?'✅ Activé':'🚫 Désactivé'),()=>toast('❌ Erreur'));
+  const b=(_prodList||[]).find(x=>String(x.id)===String(id)); if(b) b.actif=actif;
 }
 async function supprimerBoisson(id,nom){
-  if(!confirm('Supprimer la boisson "'+nom+'" ?')) return;
+  if(!confirm('Supprimer "'+nom+'" ?')) return;
   const r=await api('DELETE','/boissons/'+id).catch(()=>null);
-  if(r&&r.success){ toast('🗑️ Supprimée'); renderBoissons(); }
+  if(r&&r.success){ toast('🗑️ Supprimé'); renderProdCat(_prodCat); }
   else toast('❌ Erreur suppression');
 }
+
 // ── Autocomplétion d'adresse Google Places (via proxy backend, clé cachée) ──
 let _cliGeo = null, _sugTimer = null, _lastPreds = [];
 function initAdresseAutocomplete(){
