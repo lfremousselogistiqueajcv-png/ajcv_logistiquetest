@@ -319,7 +319,7 @@ const API_BASE = 'https://ajcvbackend-test-production.up.railway.app';
     if (document.getElementById('ajcv-test-banner')) return;
     var b = document.createElement('div');
     b.id = 'ajcv-test-banner';
-    b.textContent = '🧪 ENVIRONNEMENT DE TEST · build 26/06-2 — données fictives, sans impact prod';
+    b.textContent = '🧪 ENVIRONNEMENT DE TEST · build 26/06-3 — données fictives, sans impact prod';
     b.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;background:#7c3aed;color:#fff;font:600 13px/1.4 Arial,sans-serif;text-align:center;padding:6px 10px;display:block;box-shadow:0 2px 8px rgba(0,0,0,.3)';
     document.body.appendChild(b); document.body.style.paddingTop='32px';
   };
@@ -1472,9 +1472,9 @@ async function renderProdCat(cat){
     <div class="table-wrap"><table>
       <thead><tr><th>Nom</th><th style="width:70px;text-align:center">Actif</th><th style="width:60px"></th></tr></thead>
       <tbody>${_prodList.map(b=>`<tr>
-        <td><input value="${esc(b.nom)}" onchange="renommerBoisson('${b.id}',this.value)" style="width:100%;background:transparent;border:1px solid transparent;color:var(--text);padding:5px 7px;border-radius:6px;font-weight:600" onfocus="this.style.borderColor='var(--gold)'" onblur="this.style.borderColor='transparent'"></td>
+        <td style="font-weight:600">${esc(b.nom)}</td>
         <td style="text-align:center"><input type="checkbox" ${b.actif!==false?'checked':''} onchange="toggleBoissonActif('${b.id}',this.checked)"></td>
-        <td><button class="btn btn-red btn-sm" onclick="supprimerBoisson('${b.id}','${esc(b.nom).replace(/'/g,"\\'")}')">🗑️</button></td>
+        <td style="white-space:nowrap"><button class="btn btn-sm" style="background:#e2e8f0;color:#475569" title="Renommer" onclick="modifierProduit('${b.id}')">✏️</button> <button class="btn btn-red btn-sm" onclick="supprimerBoisson('${b.id}','${esc(b.nom).replace(/'/g,"\\'")}')">🗑️</button></td>
       </tr>`).join('')}</tbody>
     </table></div>
     ${_prodList.length===0?`<p class="muted" style="margin-top:12px">Aucune référence ${meta.label}. Ajoute la première ci-dessus.</p>`:''}`;
@@ -1500,6 +1500,16 @@ async function supprimerBoisson(id,nom){
   const r=await api('DELETE','/boissons/'+id).catch(()=>null);
   if(r&&r.success){ toast('🗑️ Supprimé'); renderProdCat(_prodCat); }
   else toast('❌ Erreur suppression');
+}
+async function modifierProduit(id){
+  const b=(_prodList||[]).find(x=>String(x.id)===String(id)); if(!b) return;
+  const nv=prompt('Nouveau nom :', b.nom);
+  if(nv===null) return;
+  const nom=(nv||'').trim();
+  if(!nom || nom===b.nom) return;
+  const r=await api('PATCH','/boissons/'+id,{nom}).catch(()=>null);
+  if(r&&r.success){ toast('✏️ Renommé'); renderProdCat(_prodCat); }
+  else toast('❌ '+((r&&r.error)||'Erreur'));
 }
 
 // ── Autocomplétion d'adresse Google Places (via proxy backend, clé cachée) ──
