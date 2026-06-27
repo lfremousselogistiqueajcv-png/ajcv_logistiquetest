@@ -1,7 +1,15 @@
 {
-  "version": "2026.06.26.8",
+  "version": "2026.06.26.9",
   "app": "AJCV Logistique — TEST",
   "historique": [
+    {
+      "v": "2026.06.26.9",
+      "date": "26/06/2026",
+      "titre": "Livraison : charbon/PLV/TPE en menu détaillé (comme boissons)",
+      "notes": [
+        "🔥🪧💳 Sur l'écran de livraison (signature), charbons, PLV et TPE se saisissent par menu détaillé (type + quantité) comme les boissons, pré-remplis avec ce qui a été préparé/chargé — pour éviter les erreurs de livraison."
+      ]
+    },
     {
       "v": "2026.06.26.8",
       "date": "26/06/2026",
