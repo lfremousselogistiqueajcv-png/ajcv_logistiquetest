@@ -509,12 +509,12 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 <div id="boissonsModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:10000;align-items:flex-end;justify-content:center">
   <div style="background:var(--surface);width:100%;max-width:520px;border-radius:18px 18px 0 0;max-height:85vh;display:flex;flex-direction:column;border:1px solid var(--border)">
     <div style="padding:16px 18px;border-bottom:1px solid var(--border)">
-      <div style="font-weight:700;font-size:16px">🥤 Détail boissons</div>
+      <div id="bdet-titre" style="font-weight:700;font-size:16px">🥤 Détail boissons</div>
       <div id="bdet-client" style="font-size:13px;color:var(--text2);margin-top:2px"></div>
     </div>
     <div id="bdet-list" style="padding:6px 14px;overflow-y:auto;flex:1"></div>
     <div style="padding:12px 18px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:12px">
-      <div style="font-size:14px">Total : <b id="bdet-total" style="color:var(--gold)">0</b> packs</div>
+      <div style="font-size:14px">Total : <b id="bdet-total" style="color:var(--gold)">0</b> <span id="bdet-unit">packs</span></div>
       <div style="display:flex;gap:8px">
         <button onclick="fermerBoissons(false)" style="padding:10px 16px;border-radius:10px;border:1px solid var(--border);background:transparent;color:var(--text);font-weight:600;cursor:pointer">Annuler</button>
         <button onclick="fermerBoissons(true)" style="padding:10px 18px;border-radius:10px;border:none;background:var(--green);color:#fff;font-weight:700;cursor:pointer">Valider</button>
@@ -537,7 +537,7 @@ const API_BASE = 'https://ajcvbackend-test-production.up.railway.app';
     if (document.getElementById('ajcv-test-banner')) return;
     var b = document.createElement('div');
     b.id = 'ajcv-test-banner';
-    b.textContent = '🧪 ENVIRONNEMENT DE TEST · build 26/06-7 — données fictives, sans impact prod';
+    b.textContent = '🧪 ENVIRONNEMENT DE TEST · build 26/06-8 — données fictives, sans impact prod';
     b.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;background:#7c3aed;color:#fff;font:600 13px/1.4 Arial,sans-serif;text-align:center;padding:6px 10px;display:block;box-shadow:0 2px 8px rgba(0,0,0,.3)';
     document.body.appendChild(b); document.body.style.paddingTop='32px';
   };
@@ -1143,28 +1143,37 @@ function tpeDe(l) { return Math.max(0, parseInt(l.nb_tpe) || 0); }
 async function fetchBoissonsRef(){
   try { const c = localStorage.getItem('ajcv_boissons_ref'); if (c) { const a = JSON.parse(c); if (Array.isArray(a)) state.boissonsRef = a; } } catch(_){}
   try {
-    const resp = await fetch(`${CFG.API_URL}/boissons`, { headers:{'Authorization':`Bearer ${state.token||''}`} });
+    const resp = await fetch(`${CFG.API_URL}/boissons?categorie=ALL`, { headers:{'Authorization':`Bearer ${state.token||''}`} });
     if (resp.ok) {
       const d = await resp.json();
-      const noms = (d.boissons||[]).filter(b=>b.actif!==false).sort((a,b)=>(a.ordre||0)-(b.ordre||0)).map(b=>b.nom);
-      state.boissonsRef = noms;
-      try { localStorage.setItem('ajcv_boissons_ref', JSON.stringify(noms)); } catch(_){}
+      const all = (d.boissons||[]).filter(b=>b.actif!==false).sort((a,b)=>(a.ordre||0)-(b.ordre||0));
+      const refs={BOISSON:[],CHARBON:[],PLV:[],TPE:[]};
+      all.forEach(b=>{ const c=(b.categorie||'BOISSON').toUpperCase(); if(!refs[c]) refs[c]=[]; refs[c].push(b.nom); });
+      state.prodRefs = refs;
+      state.boissonsRef = refs.BOISSON;
+      try { localStorage.setItem('ajcv_boissons_ref', JSON.stringify(refs.BOISSON)); } catch(_){}
     }
   } catch(_){}
 }
 
 // ── Popup détail boissons (partagée chargement + signature) ──
 let _boissonsTarget = null, _boissonsTmp = {};
-function ouvrirBoissons(id, ctx){
+const LIV_PRODS={ BOISSON:{ic:'🥤',label:'Détail boissons',detail:'boissons_detail',nb:'nb_boissons',unit:'packs'}, CHARBON:{ic:'🔥',label:'Détail charbons',detail:'charbons_detail',nb:'nb_charbons',unit:''}, PLV:{ic:'🪧',label:'Détail PLV',detail:'plv_detail',nb:'nb_plv',unit:''}, TPE:{ic:'💳',label:'Détail TPE',detail:'tpe_detail',nb:'nb_tpe',unit:''} };
+function ouvrirBoissons(id, ctx, cat){
   const l = trouverLiv(id); if (!l) return;
-  _boissonsTarget = { id, ctx };
-  _boissonsTmp = Object.assign({}, boissonsDetailDe(l));
+  cat = cat || 'BOISSON';
+  const cfg = LIV_PRODS[cat] || LIV_PRODS.BOISSON;
+  _boissonsTarget = { id, ctx, cat };
+  _boissonsTmp = Object.assign({}, detailDe(l, cfg.detail));
+  const t=document.getElementById('bdet-titre'); if(t) t.textContent = cfg.ic+' '+cfg.label;
+  const u=document.getElementById('bdet-unit'); if(u) u.textContent = cfg.unit||'';
   document.getElementById('bdet-client').textContent = (l.client||'') + ' · BL ' + (l.bl||'—');
   renderBoissonsList();
   document.getElementById('boissonsModal').style.display = 'flex';
 }
 function renderBoissonsList(){
-  const refs = state.boissonsRef || [];
+  const cat = (_boissonsTarget && _boissonsTarget.cat) || 'BOISSON';
+  const refs = (state.prodRefs && state.prodRefs[cat]) || state.boissonsRef || [];
   const list = document.getElementById('bdet-list');
   if (!refs.length) {
     list.innerHTML = '<div style="color:var(--text2);font-size:13px;padding:16px 4px">Aucune référence configurée.<br>Demande à l\'admin d\'ajouter les boissons (onglet 🥤 Boissons).</div>';
@@ -1194,10 +1203,12 @@ function fermerBoissons(valider){
   document.getElementById('boissonsModal').style.display='none';
   if (!valider || !_boissonsTarget){ _boissonsTarget=null; return; }
   const l = trouverLiv(_boissonsTarget.id);
+  const cat = _boissonsTarget.cat || 'BOISSON';
+  const cfg = LIV_PRODS[cat] || LIV_PRODS.BOISSON;
   if (l) {
     const clean={}; for (const k of Object.keys(_boissonsTmp)){ const v=Math.max(0,parseInt(_boissonsTmp[k])||0); if (v>0) clean[k]=v; }
-    l.boissons_detail = clean;
-    l.nb_boissons = Object.values(clean).reduce((a,v)=>a+v,0);
+    l[cfg.detail] = clean;
+    l[cfg.nb] = Object.values(clean).reduce((a,v)=>a+v,0);
     const ctx = _boissonsTarget.ctx;
     if (ctx==='chargement'){ renderChargement(); envoyerChargement(l, estCharge(l)); }
     else if (ctx==='signature'){ majBoissonsBtnSignature(l); }
@@ -1383,14 +1394,13 @@ function renderChargement() {
   const _tousCharges = charges === livs.length && livs.length > 0;
   const _camionLoading = state.camionDuJour === undefined;
   const _confCamion = state.camionDuJour || null;
-  if (!_camionLoading && _tousCharges && !_confCamion) {
-    html += `<div style="margin:0 14px 12px;padding:14px;border-radius:12px;background:rgba(255,179,0,.12);border:1px solid var(--gold);text-align:center"><div style="font-weight:700;margin-bottom:8px">🚚 Tout est chargé !</div><button onclick="ouvrirTopCamion()" style="width:100%;padding:12px;border-radius:10px;border:none;background:var(--gold);color:#1a1a1a;font-weight:700;font-size:15px;cursor:pointer">✅ Confirmer le camion (comptage + photo)</button></div>`;
+  if (!_camionLoading && !_confCamion && livs.length > 0) {
+    html += `<div style="margin:0 14px 12px;padding:14px;border-radius:12px;background:rgba(255,179,0,.12);border:1px solid var(--gold);text-align:center"><div style="font-weight:700;margin-bottom:8px">🚚 ${charges}/${livs.length} commande(s) cochée(s) chargée(s)</div><button onclick="ouvrirTopCamion()" style="width:100%;padding:12px;border-radius:10px;border:none;background:var(--gold);color:#1a1a1a;font-weight:700;font-size:15px;cursor:pointer">✅ Confirmer le camion (comptage + photo)</button></div>`;
   } else if (_confCamion) {
     html += `<div style="margin:0 14px 12px;padding:12px 14px;border-radius:12px;background:rgba(34,197,94,.12);border:1px solid var(--green);font-weight:600">✅ Camion confirmé${_confCamion.created_at?` à ${new Date(_confCamion.created_at).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})}`:''} · 🥤${_confCamion.nb_boissons||0} 🔥${_confCamion.nb_charbons||0} 🪧${_confCamion.nb_plv||0} 💳${_confCamion.nb_tpe||0}<div style="font-weight:500;font-size:12px;color:var(--text2);margin-top:4px">🔒 Validé — vois l'admin pour recommencer.</div></div>`;
   }
   html += `<div class="optimize-bar"><div class="optimize-info"><strong>🚚 Chargement du camion</strong>
-    Coche chaque commande chargée, et n'oublie pas boissons et charbons</div>
-    <button class="btn-optimize" onclick="toutCharger()">✓ Tout</button></div>`;
+    Coche chaque commande au fur et à mesure que tu la charges, puis confirme le camion</div></div>`;
 
   html += `<div style="padding:10px 14px 0"><input id="searchCharge" value="${(state.searchCharge||'').replace(/"/g,'&quot;')}" oninput="filtrerChargement(this.value)" placeholder="🔍 Rechercher un client, un BL..." style="width:100%;padding:11px 14px;border-radius:12px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:14px;box-sizing:border-box"></div>`;
   html += `<div class="list-section"><div class="section-label">${charges}/${livs.length} commandes chargées</div>`;
@@ -1410,9 +1420,9 @@ function renderChargement() {
       <div class="charge-steppers">
         <div class="stp"><span class="stp-lbl">📦 Colis</span><button onclick="ajusterColisCharge('${l.id}',-1)">−</button><b>${colisDe(l)}</b><button onclick="ajusterColisCharge('${l.id}',1)">+</button></div>
         <div class="stp"><span class="stp-lbl">🥤 Boissons</span><button onclick="ouvrirBoissons('${l.id}','chargement')" style="border:1px solid var(--border);background:var(--surface);color:var(--gold);font-weight:700;border-radius:8px;padding:6px 12px;font-size:15px;cursor:pointer">${boissonsDe(l)} ▸</button></div>
-        <div class="stp"><span class="stp-lbl">🔥 Charbons</span><button onclick="ajusterCharbons('${l.id}',-1)">−</button><b>${charbonsDe(l)}</b><button onclick="ajusterCharbons('${l.id}',1)">+</button></div>${plvDe(l)?`
-        <div class="stp"><span class="stp-lbl">🪧 PLV</span><button onclick="ajusterPlv('${l.id}',-1)">−</button><b>${plvDe(l)}</b><button onclick="ajusterPlv('${l.id}',1)">+</button></div>`:''}${tpeDe(l)?`
-        <div class="stp"><span class="stp-lbl">💳 TPE</span><button onclick="ajusterTpe('${l.id}',-1)">−</button><b>${tpeDe(l)}</b><button onclick="ajusterTpe('${l.id}',1)">+</button></div>`:''}
+        <div class="stp"><span class="stp-lbl">🔥 Charbons</span><button onclick="ouvrirBoissons('${l.id}','chargement','CHARBON')" style="border:1px solid var(--border);background:var(--surface);color:var(--gold);font-weight:700;border-radius:8px;padding:6px 12px;font-size:15px;cursor:pointer">${charbonsDe(l)} ▸</button></div>
+        <div class="stp"><span class="stp-lbl">🪧 PLV</span><button onclick="ouvrirBoissons('${l.id}','chargement','PLV')" style="border:1px solid var(--border);background:var(--surface);color:var(--gold);font-weight:700;border-radius:8px;padding:6px 12px;font-size:15px;cursor:pointer">${plvDe(l)} ▸</button></div>
+        <div class="stp"><span class="stp-lbl">💳 TPE</span><button onclick="ouvrirBoissons('${l.id}','chargement','TPE')" style="border:1px solid var(--border);background:var(--surface);color:var(--gold);font-weight:700;border-radius:8px;padding:6px 12px;font-size:15px;cursor:pointer">${tpeDe(l)} ▸</button></div>
       </div>
     </div>`;
   });
@@ -1573,7 +1583,7 @@ async function envoyerChargement(l, charge) {
     await fetch(`${CFG.API_URL}/livraisons/chargement`, {
       method: 'POST',
       headers: {'Content-Type':'application/json','Authorization':`Bearer ${state.token||''}`},
-      body: JSON.stringify({ id: l.id, charge, colis: colisDe(l), boissons: boissonsDe(l), boissons_detail: boissonsDetailDe(l), charbons: charbonsDe(l), plv: plvDe(l), tpe: tpeDe(l) }),
+      body: JSON.stringify({ id: l.id, charge, colis: colisDe(l), boissons: boissonsDe(l), boissons_detail: boissonsDetailDe(l), charbons: charbonsDe(l), plv: plvDe(l), tpe: tpeDe(l), charbons_detail: detailDe(l,'charbons_detail'), plv_detail: detailDe(l,'plv_detail'), tpe_detail: detailDe(l,'tpe_detail') }),
     });
   } catch(_) { /* le localStorage conserve l'état côté livreur */ }
 }

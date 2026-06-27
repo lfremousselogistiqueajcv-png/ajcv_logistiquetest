@@ -1,7 +1,17 @@
 {
-  "version": "2026.06.26.7",
+  "version": "2026.06.26.8",
   "app": "AJCV Logistique — TEST",
   "historique": [
+    {
+      "v": "2026.06.26.8",
+      "date": "26/06/2026",
+      "titre": "Chargement : confirmation manuelle + détail charbon/PLV/TPE",
+      "notes": [
+        "🚫 Bouton « ✓ Tout » retiré : chaque commande doit être cochée individuellement à mesure qu'elle est chargée (anti-triche).",
+        "✅ Bouton « Confirmer le camion » disponible en permanence (plus besoin que tout soit coché).",
+        "🔥🪧💳 Charbons, PLV et TPE se saisissent par menu détaillé (type + quantité) comme les boissons, et se pré-remplissent avec ce qui a été préparé."
+      ]
+    },
     {
       "v": "2026.06.26.7",
       "date": "26/06/2026",
