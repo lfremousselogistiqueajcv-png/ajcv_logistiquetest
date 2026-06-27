@@ -171,7 +171,7 @@ const API_BASE = 'https://ajcvbackend-test-production.up.railway.app';
     if (document.getElementById('ajcv-test-banner')) return;
     var b = document.createElement('div');
     b.id = 'ajcv-test-banner';
-    b.textContent = '🧪 ENVIRONNEMENT DE TEST · build 26/06-5 — données fictives, sans impact prod';
+    b.textContent = '🧪 ENVIRONNEMENT DE TEST · build 26/06-11 — données fictives, sans impact prod';
     b.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;background:#7c3aed;color:#fff;font:600 13px/1.4 Arial,sans-serif;text-align:center;padding:6px 10px;display:block;box-shadow:0 2px 8px rgba(0,0,0,.3)';
     document.body.appendChild(b); document.body.style.paddingTop='32px';
   };
@@ -330,7 +330,7 @@ function renderPrep(){
 }
 function carteCommande(l, volet){
   const bd=boissonsDetailDe(l);
-  const bdTxt=Object.keys(bd).length?Object.entries(bd).map(([n,q])=>`${n}×${q}`).join(' · '):'';
+  const bdTxt=Object.keys(bd).length?Object.entries(bd).map(([n,q])=>`${n} : ${q}`).join(' · '):'';
   const chTxt=detailTxt(detailDe(l,'charbons_detail'))||(charbonsDe(l)?String(charbonsDe(l)):'');
   const plvTxt=detailTxt(detailDe(l,'plv_detail'));
   const tpeTxt=detailTxt(detailDe(l,'tpe_detail'));
@@ -355,7 +355,7 @@ function carteCommande(l, volet){
       <label>📦 Colis<input type="number" min="0" inputmode="numeric" id="qin-${l.id}-nb_colis" value="${colisDe(l)}" onchange="majQte('${l.id}','nb_colis',this.value)"></label>
       <label>🎁 Cadeaux<input type="number" min="0" inputmode="numeric" id="qin-${l.id}-nb_cadeaux" value="${cadeauxDe(l)}" onchange="majQte('${l.id}','nb_cadeaux',this.value)"></label>
     </div>
-    ${PREP_PRODS.map(p=>{const dt=detailTxt(detailDe(l,p.detail));return `<button class="btn-bo" onclick="ouvrirProdPrep('${l.id}','${p.cat}')">${p.ic} ${p.label} : <span>${dt||'aucun'}</span> ✏️</button>`;}).join('')}
+    ${PREP_PRODS.map(p=>{const dt=detailTxt(detailDe(l,p.detail));return `<button class="btn-bo" onclick="ouvrirProdPrep('${l.id}','${p.cat}')">${p.ic} ${p.label} — <span>${dt||'aucun'}</span> ✏️</button>`;}).join('')}
     <input type="file" accept="image/*" capture="environment" id="file-${l.id}" style="display:none" onchange="photoChoisie('${l.id}',this)">
     <div id="thumbs-${l.id}" class="thumbs-wrap"></div>
     <div class="c-actions">
@@ -518,7 +518,7 @@ function validerBoissonsPrep(){
 }
 function fermerBoissonsPrep(){ state._boId=null; document.getElementById('boModal').style.display='none'; }
 function detailDe(l, field){ let d=l?l[field]:null; if(typeof d==='string'){ try{ d=JSON.parse(d); }catch(_){ d={}; } } return (d&&typeof d==='object')?d:{}; }
-function detailTxt(d){ const k=Object.keys(d||{}); return k.length?Object.entries(d).map(([n,q])=>`${n}×${q}`).join(' · '):''; }
+function detailTxt(d){ const k=Object.keys(d||{}); return k.length?Object.entries(d).map(([n,q])=>`${n} : ${q}`).join(' · '):''; }
 const PREP_PRODS=[
   {cat:'BOISSON',ic:'🥤',label:'Boissons',detail:'boissons_detail',nb:'nb_boissons'},
   {cat:'CHARBON',ic:'🔥',label:'Charbons',detail:'charbons_detail',nb:'nb_charbons'},

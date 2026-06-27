@@ -1,7 +1,23 @@
 {
-  "version": "2026.06.26.9",
+  "version": "2026.06.26.11",
   "app": "AJCV Logistique — TEST",
   "historique": [
+    {
+      "v": "2026.06.26.11",
+      "date": "26/06/2026",
+      "titre": "Préparateur : lisibilité « désignation : quantité »",
+      "notes": [
+        "👓 Même affichage clair que le livreur : « DÉSIGNATION : quantité » (ex. « SAMBO : 3 · DESPERADOS : 2 ») sur les boutons et résumés du préparateur."
+      ]
+    },
+    {
+      "v": "2026.06.26.10",
+      "date": "26/06/2026",
+      "titre": "Lisibilité : « désignation : quantité »",
+      "notes": [
+        "👓 Les quantités s'affichent en clair « DÉSIGNATION : quantité » (ex. « CHARBON 1 : 2 · CHARBON 2 : 2 ») sur les boutons de livraison, les récaps et les résumés de chargement — plus de confusion entre le produit et la quantité."
+      ]
+    },
     {
       "v": "2026.06.26.9",
       "date": "26/06/2026",

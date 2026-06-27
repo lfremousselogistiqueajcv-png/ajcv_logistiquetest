@@ -537,7 +537,7 @@ const API_BASE = 'https://ajcvbackend-test-production.up.railway.app';
     if (document.getElementById('ajcv-test-banner')) return;
     var b = document.createElement('div');
     b.id = 'ajcv-test-banner';
-    b.textContent = '🧪 ENVIRONNEMENT DE TEST · build 26/06-9 — données fictives, sans impact prod';
+    b.textContent = '🧪 ENVIRONNEMENT DE TEST · build 26/06-10 — données fictives, sans impact prod';
     b.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;background:#7c3aed;color:#fff;font:600 13px/1.4 Arial,sans-serif;text-align:center;padding:6px 10px;display:block;box-shadow:0 2px 8px rgba(0,0,0,.3)';
     document.body.appendChild(b); document.body.style.paddingTop='32px';
   };
@@ -1217,10 +1217,11 @@ function fermerBoissons(valider){
 }
 function majBoissonsBtnSignature(l){
   if(!l) return;
-  [['sigBoissonsBtn','boissons_detail',' packs'],['sigCharbonsBtn','charbons_detail',''],['sigPlvBtn','plv_detail',''],['sigTpeBtn','tpe_detail','']].forEach(([id,field,unit])=>{
+  [['sigBoissonsBtn','boissons_detail'],['sigCharbonsBtn','charbons_detail'],['sigPlvBtn','plv_detail'],['sigTpeBtn','tpe_detail']].forEach(([id,field])=>{
     const b=document.getElementById(id); if(!b) return;
-    const d=detailDe(l,field); const n=Object.keys(d).length; const t=Object.values(d).reduce((a,v)=>a+(parseInt(v)||0),0);
-    b.textContent = t>0 ? `${t}${unit} · ${n} réf. — appuyer pour modifier ▸` : 'Aucun — appuyer pour saisir ▸';
+    const d=detailDe(l,field);
+    const e=Object.entries(d).filter(([n,q])=>(parseInt(q)||0)>0);
+    b.textContent = e.length ? e.map(([n,q])=>`${n} : ${q}`).join('   ·   ') + '   ✏️' : 'Aucun — appuyer pour saisir ▸';
   });
 }
 function estCharge(l) { return l.charge === true || chargeSet().has(String(l.id)); }
@@ -1273,9 +1274,9 @@ async function renderPreparation(){
   if (livs.length === 0) html += '<div style="padding:30px 14px;text-align:center;color:var(--text2)">Aucune commande ce jour.</div>';
   livs.forEach(l => {
     const done = !!l.prepare;
-    const bd = boissonsDetailDe(l) || {};
-    const bdTxt = Object.keys(bd).length ? Object.entries(bd).map(([n,q]) => `${n}×${q}`).join(' · ') : '';
-    const ligneQte = `📦 ${colisDe(l)} colis${bdTxt ? ` · 🥤 ${bdTxt}` : ''}${charbonsDe(l) ? ` · 🔥 ${charbonsDe(l)}` : ''}${plvDe(l) ? ` · 🪧 ${plvDe(l)}` : ''}${tpeDe(l) ? ` · 💳 ${tpeDe(l)}` : ''}`;
+    const _fmtD = (field, fb) => { const d=detailDe(l,field); const e=Object.entries(d).filter(([n,q])=>(parseInt(q)||0)>0); return e.length ? e.map(([n,q])=>`${n} : ${q}`).join(', ') : (fb? String(fb):''); };
+    const _txtBo=_fmtD('boissons_detail',0), _txtCh=_fmtD('charbons_detail',charbonsDe(l)), _txtPlv=_fmtD('plv_detail',plvDe(l)), _txtTpe=_fmtD('tpe_detail',tpeDe(l));
+    const ligneQte = `📦 ${colisDe(l)} colis${_txtBo?` · 🥤 ${_txtBo}`:''}${_txtCh?` · 🔥 ${_txtCh}`:''}${_txtPlv?` · 🪧 ${_txtPlv}`:''}${_txtTpe?` · 💳 ${_txtTpe}`:''}`;
     const search = (String(l.client||'')+' '+String(l.ville||'')+' '+String(l.bl||'')).toLowerCase().replace(/"/g,'&quot;');
     html += `<div class="charge-card prep-card${done ? ' charge-ok' : ''}" data-search="${search}">
       <div class="charge-top">
@@ -1527,7 +1528,7 @@ function ouvrirRecapProduit(cat){
     const n=cfg.nb(l)||0;
     if(!n && !Object.keys(d).length) return '';
     total+=n;
-    const types=Object.keys(d).length?Object.entries(d).map(([t,q])=>`${t}×${q}`).join(', '):(n?String(n):'—');
+    const types=Object.keys(d).length?Object.entries(d).map(([t,q])=>`${t} : ${q}`).join('   ·   '):(n?String(n):'—');
     return `<div style="padding:10px 0;border-bottom:1px solid var(--border)"><div style="font-weight:600">${(l.client||'—')}</div><div style="font-size:12px;color:var(--text2)">${(l.ville||'')} · BL ${(l.bl||'—')}</div><div style="margin-top:3px;font-weight:600;color:var(--gold)">${types}</div></div>`;
   }).filter(Boolean).join('');
   const t=document.getElementById('recapTitre'); if(t) t.textContent=`${cfg.ic} ${cfg.label} · total ${total}`;
