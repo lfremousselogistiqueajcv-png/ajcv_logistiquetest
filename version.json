@@ -1,105 +1,255 @@
 {
-  "version": "2026.06.26.11",
-  "app": "AJCV Logistique — TEST",
+  "version": "2026.06.26.13",
+  "app": "AJCV Logistique",
   "historique": [
+    {
+      "v": "2026.06.26.13",
+      "date": "27/06/2026",
+      "titre": "Admin : Charbons / PLV / TPE par référence dans les livraisons",
+      "notes": [
+        "Création et modification d'une livraison : Charbons, PLV et TPE se saisissent désormais par référence (CHARBON 1, CHARBON 2…), comme les Boissons.",
+        "Fini le champ « nombre » unique : on précise la quantité de chaque référence, en cohérence avec le préparateur et le livreur.",
+        "Les quantités existantes sont reprises automatiquement à l'ouverture de la fiche.",
+        "Cadeaux reste un simple compteur (pas de référence)."
+      ]
+    },
+    {
+      "v": "2026.06.26.12",
+      "date": "27/06/2026",
+      "titre": "Zones : ajout/correction de codes postaux depuis l'admin",
+      "notes": [
+        "Nouvel encart dans l'onglet 📍 Zones : « Ajouter ou corriger un code postal ».",
+        "Tu saisis un CP (97XXX) et son secteur → la zone (livreur) est affectée automatiquement.",
+        "Tes ajouts portent le tag « perso » et se retirent d'un clic (retour au défaut).",
+        "Les 60+ codes postaux d'origine restent inchangés : la base ne fait qu'ajouter ou corriger."
+      ]
+    },
     {
       "v": "2026.06.26.11",
       "date": "26/06/2026",
-      "titre": "Préparateur : lisibilité « désignation : quantité »",
+      "titre": "Produits typés, chargement camion confirmé & traçabilité",
       "notes": [
-        "👓 Même affichage clair que le livreur : « DÉSIGNATION : quantité » (ex. « SAMBO : 3 · DESPERADOS : 2 ») sur les boutons et résumés du préparateur."
+        "📦 Charbons, PLV et TPE se gèrent comme les boissons : par type/référence à la préparation, au chargement et à la livraison. Saisie par menu détaillé pour éviter les erreurs.",
+        "🧰 Admin : onglet Produits avec 4 catégories (boissons, charbons, PLV, TPE) — créer, renommer ✏️ et supprimer 🗑️ chaque référence.",
+        "🚚 Livreur : confirmation du chargement camion (comptage 🥤🔥🪧💳 + photos). Chaque commande se coche individuellement au chargement.",
+        "🔒 Une fois confirmé, le camion est verrouillé. L'admin peut le rouvrir pour permettre de recommencer.",
+        "🚚 Admin : nouvel onglet Chargement — traçabilité de tous les camions confirmés par date, avec photos.",
+        "👆 Livreur : cliquer un total produit ouvre le détail « quel client, combien, par type ».",
+        "🧰 Préparation : le nom du préparateur et l'heure de préparation sont enregistrés et visibles (admin + préparateur).",
+        "🕒 Admin & carte : date et heure de livraison terminée visibles ; les livraisons « commercial » sont exclues de la carte et des KPI livreurs.",
+        "👓 Affichage des quantités clarifié partout : « DÉSIGNATION : quantité »."
       ]
     },
     {
-      "v": "2026.06.26.10",
-      "date": "26/06/2026",
-      "titre": "Lisibilité : « désignation : quantité »",
+      "v": "2026.06.25.19",
+      "date": "25/06/2026",
+      "titre": "Signature : ouverture fiable (fini le « réactualiser avant »)",
       "notes": [
-        "👓 Les quantités s'affichent en clair « DÉSIGNATION : quantité » (ex. « CHARBON 1 : 2 · CHARBON 2 : 2 ») sur les boutons de livraison, les récaps et les résumés de chargement — plus de confusion entre le produit et la quantité."
+        "L'écran de signature dimensionne le canvas une fois la fenêtre réellement affichée (au lieu d'un délai fixe), donc plus besoin de rafraîchir la page quand ça ne s'ouvrait pas correctement.",
+        "Filet supplémentaire : le canvas se réinitialise automatiquement au moment où le doigt touche, s'il n'était pas encore prêt."
       ]
     },
     {
-      "v": "2026.06.26.9",
-      "date": "26/06/2026",
-      "titre": "Livraison : charbon/PLV/TPE en menu détaillé (comme boissons)",
+      "v": "2026.06.25.18",
+      "date": "25/06/2026",
+      "titre": "Signature : fiabilité sur smartphones Samsung",
       "notes": [
-        "🔥🪧💳 Sur l'écran de livraison (signature), charbons, PLV et TPE se saisissent par menu détaillé (type + quantité) comme les boissons, pré-remplis avec ce qui a été préparé/chargé — pour éviter les erreurs de livraison."
+        "Pad de signature revu : le tracé suit désormais le doigt précisément quelle que soit la densité/taille d'écran (correction du décalage sur Samsung standard).",
+        "Ajout d'un garde anti-canvas-vide si l'écran de signature met du temps à s'afficher (appareils plus lents)."
       ]
     },
     {
-      "v": "2026.06.26.8",
-      "date": "26/06/2026",
-      "titre": "Chargement : confirmation manuelle + détail charbon/PLV/TPE",
+      "v": "2026.06.25.17",
+      "date": "25/06/2026",
+      "titre": "Nouvelles quantités : PLV et TPE (comme charbon)",
       "notes": [
-        "🚫 Bouton « ✓ Tout » retiré : chaque commande doit être cochée individuellement à mesure qu'elle est chargée (anti-triche).",
-        "✅ Bouton « Confirmer le camion » disponible en permanence (plus besoin que tout soit coché).",
-        "🔥🪧💳 Charbons, PLV et TPE se saisissent par menu détaillé (type + quantité) comme les boissons, et se pré-remplissent avec ce qui a été préparé."
+        "Deux nouveaux compteurs PLV (🪧) et TPE (💳) ajoutés partout où il y a les charbons : formulaire d'ajout et modale de modification (admin), chargement et signature (livreur), bon de réception PDF.",
+        "Les détails PLV/TPE s'affichent côté livreur (chargement, détail commande, récap signature) quand ils sont présents.",
+        "⚠️ Penser à exécuter ajout_plv_tpe.sql dans Supabase (colonnes nb_plv, nb_tpe)."
       ]
     },
     {
-      "v": "2026.06.26.7",
-      "date": "26/06/2026",
-      "titre": "Correctif verrou camion + récap produit cliquable",
+      "v": "2026.06.25.16",
+      "date": "25/06/2026",
+      "titre": "Signatures : gestion des colonnes trop courtes (varchar)",
       "notes": [
-        "🔒 Correctif : le camion confirmé reste bien verrouillé (un décalage de format de date empêchait le verrou de tenir).",
-        "👆 Livreur : dans l'onglet Chargement, cliquer sur un total 🥤 / 🔥 / 🪧 / 💳 ouvre le détail « quel client, combien, par type »."
+        "Cause trouvée : une colonne de la table signatures (date_heure) est trop courte (varchar(10)) pour la date + heure envoyée. Le serveur tronque désormais automatiquement les valeurs trop longues au lieu d'échouer — la signature s'enregistre toujours.",
+        "ALTER TABLE optionnel fourni pour conserver l'heure complète."
       ]
     },
     {
-      "v": "2026.06.26.6",
-      "date": "26/06/2026",
-      "titre": "Camion verrouillé après validation + onglet Chargement (admin)",
+      "v": "2026.06.25.15",
+      "date": "25/06/2026",
+      "titre": "Correctif enregistrement des signatures",
       "notes": [
-        "🔒 Livreur : une fois le camion confirmé, le comptage est verrouillé (plus de modification possible côté livreur).",
-        "🚚 Admin : nouvel onglet « Chargement » — traçabilité de tous les camions confirmés par date, avec photos.",
-        "♻️ Admin : bouton « Permettre de recommencer » pour rouvrir un camion (le livreur peut alors refaire son comptage + photos)."
+        "Enregistrement de signature rendu auto-adaptatif : si une colonne attendue manque dans la base, le serveur la retire automatiquement et enregistre quand même la signature (qui n'est jamais perdue).",
+        "En cas d'échec persistant, l'app livreur affiche désormais le détail technique de l'erreur pour diagnostic."
       ]
     },
     {
-      "v": "2026.06.26.5",
-      "date": "26/06/2026",
-      "titre": "Préparateur : menus charbons / PLV / TPE (comme boissons)",
+      "v": "2026.06.25.14",
+      "date": "25/06/2026",
+      "titre": "Plan de tournée : une couleur par livreur",
       "notes": [
-        "📦 Dans l'appli préparation, charbons, PLV et TPE se saisissent par menu de sélection (type + quantité), comme les boissons.",
-        "Le résumé de chaque commande affiche le détail 🥤 / 🔥 / 🪧 / 💳."
+        "Chaque livreur a désormais une couleur stable et distincte, appliquée aux pastilles de charge, aux menus « Livreur affecté » du tableau et au tableau de simulation. Lecture beaucoup plus rapide de qui livre quoi. Les lignes non affectées restent en gris neutre."
       ]
     },
     {
-      "v": "2026.06.26.4",
-      "date": "26/06/2026",
-      "titre": "Livreur : confirmation du chargement camion (TOP final)",
+      "v": "2026.06.25.13",
+      "date": "25/06/2026",
+      "titre": "Livreurs visibles sur les comptes non-Admin (dépôt)",
       "notes": [
-        "🚚 Quand toutes les commandes sont cochées chargées, un bouton « Confirmer le camion » apparaît dans l'onglet Chargement.",
-        "🔢 Écran de confirmation : totaux 🥤 boissons / 🔥 charbons / 🪧 PLV / 💳 TPE pré-remplis et corrigeables + une ou plusieurs photos du chargement.",
-        "✅ Une fois validé, le camion est marqué confirmé (heure + comptage), modifiable si besoin.",
-        "⚠️ Exécuter chargements_camion.sql sur la base."
+        "Le plan de tournée charge la liste des livreurs via un nouvel endpoint léger accessible à tout compte connecté (ex. DEPOT_JEANFRED). Avant, seul un compte Admin pouvait voir les livreurs et donc affecter."
       ]
     },
     {
-      "v": "2026.06.26.3",
-      "date": "26/06/2026",
-      "titre": "Admin : modifier / supprimer les produits",
+      "v": "2026.06.25.12",
+      "date": "25/06/2026",
+      "titre": "Correctif : livreurs absents du plan d'affectation",
       "notes": [
-        "✏️ Onglet Produits : bouton ✏️ pour renommer et 🗑️ pour supprimer chaque produit (boissons, charbons, PLV, TPE). La case Actif reste pour désactiver sans supprimer."
+        "Plan de tournée : les livreurs sont de nouveau listés d'après la casquette 🚚 « Peut livrer » (et non plus le seul rôle « Livreur »). Un livreur ayant un autre rôle mais la casquette cochée réapparaît dans le plan et dans les menus d'affectation."
       ]
     },
     {
-      "v": "2026.06.26.2",
-      "date": "26/06/2026",
-      "titre": "Qui a préparé + heure de préparation",
+      "v": "2026.06.25.11",
+      "date": "25/06/2026",
+      "titre": "Préparé en masse + autocomplétion adresse robuste",
       "notes": [
-        "🧰 Nom du préparateur et heure de préparation affichés côté admin et préparateur (« préparée le … par … »).",
-        "⚠️ Exécuter ajout_prepare_par.sql sur la base."
+        "Onglet Livraisons : bouton « 🧰 Tout marquer préparé » qui tope d'un coup toutes les livraisons affichées (de la date/zone filtrée) en statut préparé, sans photo.",
+        "Modif client : autocomplétion d'adresse robustifiée (déclenchement aussi au clic dans le champ, sélection tactile mobile, suggestions plus lisibles). Libellé corrigé (Base Adresse Nationale, pas Google)."
       ]
     },
     {
-      "v": "2026.06.26.1",
-      "date": "26/06/2026",
-      "titre": "Produits typés + infos livraison",
+      "v": "2026.06.25.10",
+      "date": "25/06/2026",
+      "titre": "Admin : éditer les adresses clients + désaffecter par zone",
       "notes": [
-        "📦 Admin : onglet Produits avec 4 catégories (Boissons, Charbons, PLV, TPE).",
-        "🕒 Date et heure de livraison terminée visibles (admin + carte).",
-        "👔 Livraisons « commercial » exclues de la carte et des KPI livreurs."
+        "✏️ Onglet Clients : bouton ✏️ sur chaque ligne pour modifier l adresse, le code postal, la ville, les téléphones et l email d un client. La position GPS est recalculée automatiquement à l enregistrement.",
+        "🧹 Plan de tournée : boutons « Tout désaffecter » par zone (Sud / Nord-Est / Ouest) pour libérer toutes les livraisons d une zone en un clic."
+      ]
+    },
+    {
+      "v": "2026.06.25.9",
+      "date": "25/06/2026",
+      "titre": "Admin : modifier les quantités d une livraison",
+      "notes": [
+        "✏️ Onglet Livraisons : bouton ✏️ sur chaque ligne pour modifier une livraison existante (colis, boissons par référence, charbons, cadeaux/présentoirs) sans avoir à la recréer."
+      ]
+    },
+    {
+      "v": "2026.06.25.8",
+      "date": "25/06/2026",
+      "titre": "Géocodage des adresses corrigé + re-géocodage en masse",
+      "notes": [
+        "🌍 Bouton « Re-géocoder TOUT » (onglet Clients) refait : recalcule toutes les positions via la Base Adresse Nationale (avec le code postal pour la fiabilité Réunion), avec barre de progression et liste des adresses à corriger. Plus besoin de clé Google.",
+        "📍 Les coordonnées hors Réunion (points en mer, fiches mal placées) sont désormais bloquées à l import et corrigées par le re-géocodage."
+      ]
+    },
+    {
+      "v": "2026.06.25.7",
+      "date": "25/06/2026",
+      "titre": "Livraisons « commercial » (hors circuit livreurs)",
+      "notes": [
+        "👔 Onglet Livraisons : bouton 👔 sur chaque ligne pour toper une livraison « livrée par un commercial ». Elle est alors retirée du circuit des livreurs (appli livreur + plan de tournée) et s'affiche « 👔 Commercial » dans la colonne Livreur."
+      ]
+    },
+    {
+      "v": "2026.06.25.6",
+      "date": "25/06/2026",
+      "titre": "Admin : reporter une livraison à une autre date",
+      "notes": [
+        "📅 Onglet Livraisons : un bouton 📅 sur chaque ligne permet de reporter la livraison à une autre date (quand un client demande de décaler). La livraison bascule alors sur la nouvelle date choisie."
+      ]
+    },
+    {
+      "v": "2026.06.25.5",
+      "date": "25/06/2026",
+      "titre": "Préparateur : plusieurs photos par commande",
+      "notes": [
+        "📷 Appli préparation : « Prendre une photo » ouvre directement l'appareil photo ; recommence autant de fois que besoin pour ajouter plusieurs photos à une commande, et retire-en une avant de valider si besoin.",
+        "🖼️ Toutes les photos d'une préparation sont visibles dans l'onglet « Préparé » et dans l'onglet Préparation de l'admin."
+      ]
+    },
+    {
+      "v": "2026.06.25.3",
+      "date": "25/06/2026",
+      "titre": "Lisibilité onglet Préparation + confirmation suppression",
+      "notes": [
+        "🧰 Admin : noms clients à nouveau lisibles dans l'onglet Préparation.",
+        "🗑️ Admin : confirmation renforcée (avec le n° de BLV) avant de supprimer une livraison."
+      ]
+    },
+    {
+      "v": "2026.06.25.2",
+      "date": "25/06/2026",
+      "titre": "Préparateur : 3 volets À préparer / En cours / Préparé",
+      "notes": [
+        "🗂️ Trois onglets dans l'appli préparateur : À préparer · En cours · Préparé, avec compteurs.",
+        "🧰 Bouton « Je prépare » pour prendre une commande en main (elle bascule en « En cours »).",
+        "✅ Correction du bouton Valider qui pouvait rester bloqué."
+      ]
+    },
+    {
+      "v": "2026.06.25.1",
+      "date": "25/06/2026",
+      "titre": "Suivi des préparations",
+      "notes": [
+        "🧰 Admin : nouvel onglet Préparation — retrouver chaque préparation et sa photo, avec barre de recherche ; possibilité d'annuler une prépa ou de redemander une photo.",
+        "📥 Import : option « ces commandes sont déjà préparées » pour marquer un lot comme préparé directement à l'import.",
+        "📷 Préparateur : quand l'admin redemande une photo, la commande réapparaît avec le repère « photo à refaire »."
+      ]
+    },
+    {
+      "v": "2026.06.25",
+      "date": "25/06/2026",
+      "titre": "Cadeaux + quantités ajustables à la préparation",
+      "notes": [
+        "🎁 Nouveau champ Cadeaux : renseigné à la création du bon de livraison (admin) et ajustable au moment de la préparation.",
+        "✏️ Le préparateur peut corriger les quantités réelles (colis, charbons, boissons, cadeaux) avant de valider la photo.",
+        "🔒 Renforcement de la sécurité d'accès aux données côté serveur."
+      ]
+    },
+    {
+      "v": "2026.06.24",
+      "date": "24/06/2026",
+      "titre": "Appli Préparation + validation plus rapide",
+      "notes": [
+        "🧰 Nouvelle appli Préparation dédiée pour les préparateurs (compte séparé) : liste des commandes du jour, photo obligatoire et validation. La préparation n'est plus dans l'appli livreur.",
+        "✍️ Validation de livraison nettement plus rapide : la signature est allégée, fini le temps d'attente avant de passer à la livraison suivante.",
+        "✅ Correctif : plus de livraisons qui « réapparaissent » à livrer après une validation réussie.",
+        "🥤 Boissons et charbons peuvent être saisis dès la création du bon de livraison, et se pré-remplissent automatiquement au chargement.",
+        "📷 Au chargement, un badge indique si la commande est préparée, avec accès à la photo de préparation."
+      ]
+    },
+    {
+      "v": "2026.06.23",
+      "date": "23/06/2026",
+      "titre": "Recherche, sens de tournée & ordre fiabilisé",
+      "notes": [
+        "🔍 Barre de recherche dans la liste des livraisons ET dans le chargement (par client, ville ou BL)",
+        "🧭 Choix du sens de tournée : Auto (le plus court), tour par l'Ouest ou tour par l'Est",
+        "🗺️ Optimisation fiabilisée quand il y a beaucoup de livraisons : l'ordre suit le tour de l'île, fini les détours incohérents à travers les hauts si le réseau est lent"
+      ]
+    },
+    {
+      "v": "2026.06.18.2",
+      "date": "18/06/2026",
+      "titre": "Retour aux 3 zones",
+      "notes": [
+        "🗺️ Zones simplifiées : Nord-Est · Ouest · Sud (fin du découpage en 4)",
+        "🤖 Simulation du Plan de tournée par ces 3 zones (Nord et Est regroupés)"
+      ]
+    },
+    {
+      "v": "2026.06.18",
+      "date": "18/06/2026",
+      "titre": "Chargement camion, colis & tournées fiables",
+      "notes": [
+        "🚚 Nouvel onglet Chargement camion : coche chaque commande chargée et confirme le nombre de colis avant de partir",
+        "📦 Le nombre de colis remonte dans les KPI (par zone et par livreur)",
+        "🧭 Optimisation de tournée fiabilisée : calcul côté serveur (OSRM), plus de blocage au-delà de 20 livraisons mélangées",
+        "📥 Import livraisons : une date manquante ne bloque plus l'import",
+        "🔄 Mise à jour automatique de l'application + numéro de version visible"
       ]
     }
   ]
