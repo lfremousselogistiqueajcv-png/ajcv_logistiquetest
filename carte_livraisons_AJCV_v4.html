@@ -158,7 +158,7 @@ body { font-family: Arial, sans-serif; background:#f0f2f5; color:#222; }
       <label for="rememberMe" style="font-size:12px;color:#8B9EC7;cursor:pointer">Se souvenir de moi</label>
     </div>
     <button class="login-btn" id="loginBtn" onclick="seConnecter()" disabled>Se connecter</button>
-    <div style="text-align:center;margin-top:14px"><a href="reset.html" style="color:#1565C0;font-size:13px;text-decoration:none;font-weight:600">Mot de passe oublié ?</a></div>
+    <div style="text-align:center;margin-top:14px"><a href="https://lfremousselogistiqueajcv-png.github.io/ajcv_logistique/reset.html" style="color:#1565C0;font-size:13px;text-decoration:none;font-weight:600">Mot de passe oublié ?</a></div>
     <div class="login-note">🔒 Session sécurisée · Expiration 8h<br>sav.ajcv@gmail.com</div>
   </div>
 </div>
@@ -289,23 +289,17 @@ body { font-family: Arial, sans-serif; background:#f0f2f5; color:#222; }
   }
 })();
 
-// ════════════════════════════════════════
-// ENVIRONNEMENT DE TEST — backend de test, données fictives. Build affiché dans le bandeau.
-// ════════════════════════════════════════
 const API_BASE = 'https://ajcvbackend-test-production.up.railway.app';
 (function(){
-  var show = function(){
-    if (document.getElementById('ajcv-test-banner')) return;
-    var b = document.createElement('div');
-    b.id = 'ajcv-test-banner';
-    b.textContent = '🧪 ENVIRONNEMENT DE TEST · build 26/06-1 — données fictives, sans impact prod';
-    b.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;background:#7c3aed;color:#fff;font:600 13px/1.4 Arial,sans-serif;text-align:center;padding:6px 10px;display:block;box-shadow:0 2px 8px rgba(0,0,0,.3)';
+  var show=function(){
+    if(document.getElementById('ajcv-test-banner'))return;
+    var b=document.createElement('div'); b.id='ajcv-test-banner';
+    b.textContent='🧪 ENVIRONNEMENT DE TEST · build 26/06-14';
+    b.style.cssText='position:fixed;top:0;left:50%;transform:translateX(-50%);z-index:99999;background:#7c3aed;color:#fff;font:600 12px/1.3 Arial,sans-serif;text-align:center;padding:4px 14px;border-radius:0 0 8px 8px;box-shadow:0 2px 6px rgba(0,0,0,.3)';
     document.body.appendChild(b);
-    document.body.style.paddingTop = '32px';
   };
-  if (document.body) show(); else document.addEventListener('DOMContentLoaded', show);
+  if(document.body)show(); else document.addEventListener('DOMContentLoaded',show);
 })();
-
 const API_URL = API_BASE;
 const MAP_TILES_KEY = 'AIzaSyANCuTbj18tPJ9ZzreJpRgsR9j-Ijt-26g';  // Clé Google Map Tiles (restreinte: sites AJCV + Map Tiles API)
 
@@ -702,9 +696,11 @@ function filtrer() {
   const statut      = document.getElementById('filtre-statut').value;
   const dateDebut   = document.getElementById('filtre-date-debut').value;
   const dateFin     = document.getElementById('filtre-date-fin').value;
-  const dDebut      = dateDebut ? new Date(dateDebut) : null;
-  const dFin        = dateFin   ? new Date(dateFin)   : null;
-  if (dFin) dFin.setHours(23,59,59); // inclure toute la journée de fin
+  // Parse en heure LOCALE (comme parseDateFR) — évite le décalage UTC (Réunion = UTC+4)
+  const _pl = s => { if(!s) return null; const p=s.split('-'); return p.length===3 ? new Date(+p[0],+p[1]-1,+p[2]) : null; };
+  const dDebut      = _pl(dateDebut);
+  const dFin        = _pl(dateFin);
+  if (dFin) dFin.setHours(23,59,59,999); // inclure toute la journée de fin
 
   livraisonsFiltrees = toutesLivraisons.filter(l=>{
     if (l.commercial===true || l.commercial==='true') return false; // commercial → hors carte

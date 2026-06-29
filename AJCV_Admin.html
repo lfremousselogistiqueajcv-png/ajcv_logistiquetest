@@ -68,6 +68,10 @@ tr:hover td{background:rgba(255,255,255,.02)}
 .kpi{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;text-align:center}
 .kpi-v{font-size:28px;font-weight:700}
 .kpi-l{font-size:12px;color:var(--text2);margin-top:4px}
+.kpi-per{padding:7px 13px;border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text2);font-size:13px;font-weight:600;cursor:pointer}
+.kpi-per.active{background:var(--gold);color:#1a1a1a;border-color:var(--gold)}
+.kpi-sec{font-weight:700;font-size:13px;margin:16px 0 8px;color:var(--text2);letter-spacing:.3px}
+.kpi-date{padding:6px 9px;border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text);font-size:13px}
 /* AUTOCOMPLETE */
 .ac-wrap{position:relative}
 .ac-list{position:absolute;top:100%;left:0;right:0;background:var(--surface2);border:1px solid var(--gold);border-radius:0 0 8px 8px;max-height:240px;overflow-y:auto;z-index:999}
@@ -320,7 +324,7 @@ const API_BASE = 'https://ajcvbackend-test-production.up.railway.app';
     if (document.getElementById('ajcv-test-banner')) return;
     var b = document.createElement('div');
     b.id = 'ajcv-test-banner';
-    b.textContent = '🧪 ENVIRONNEMENT DE TEST · build 26/06-13 — données fictives, sans impact prod';
+    b.textContent = '🧪 ENVIRONNEMENT DE TEST · build 26/06-14 — données fictives, sans impact prod';
     b.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;background:#7c3aed;color:#fff;font:600 13px/1.4 Arial,sans-serif;text-align:center;padding:6px 10px;display:block;box-shadow:0 2px 8px rgba(0,0,0,.3)';
     document.body.appendChild(b); document.body.style.paddingTop='32px';
   };
@@ -2284,18 +2288,88 @@ async function chargerFlotte(){
 // ════════════════════════════════════════════════════════════════════════════
 // ONGLET KPI
 // ════════════════════════════════════════════════════════════════════════════
+let _kpiPeriode=null;
+function _isoLocal(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+function fmtJour(s){ const p=String(s||'').split('-'); return p.length===3?p[2]+'/'+p[1]:s; }
+function majKpiBtns(){ document.querySelectorAll('.kpi-per').forEach(b=>b.classList.toggle('active', b.dataset.p===(_kpiPeriode&&_kpiPeriode.preset))); }
+function setKpiPeriode(preset){
+  const now=new Date(); let debut, fin=_isoLocal(now);
+  if(preset==='today') debut=_isoLocal(now);
+  else if(preset==='7j'){ const d=new Date(now); d.setDate(d.getDate()-6); debut=_isoLocal(d); }
+  else if(preset==='30j'){ const d=new Date(now); d.setDate(d.getDate()-29); debut=_isoLocal(d); }
+  else if(preset==='mois') debut=_isoLocal(new Date(now.getFullYear(),now.getMonth(),1));
+  _kpiPeriode={debut,fin,preset};
+  const di=document.getElementById('kpi-debut'), fi=document.getElementById('kpi-fin');
+  if(di) di.value=debut; if(fi) fi.value=fin;
+  majKpiBtns(); chargerKPI();
+}
+function chargerKPIPerso(){
+  const debut=document.getElementById('kpi-debut').value, fin=document.getElementById('kpi-fin').value;
+  if(!debut||!fin) return;
+  _kpiPeriode={debut,fin,preset:'perso'};
+  majKpiBtns(); chargerKPI();
+}
 async function renderKPI(){
-  const d=await api('GET','/kpi').catch(()=>null);
-  if(!d||d.error){document.getElementById('content').innerHTML='<div class="card"><div class="loading">❌ Erreur de chargement des KPI</div></div>';return;}
-  const g=d.global||{};
+  if(!_kpiPeriode){ const now=new Date(); const d=new Date(now); d.setDate(d.getDate()-29); _kpiPeriode={debut:_isoLocal(d),fin:_isoLocal(now),preset:'30j'}; }
   document.getElementById('content').innerHTML=`
+    <div class="card">
+      <h3 style="margin:0 0 10px">📊 Tableau de bord</h3>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+        <button class="kpi-per" data-p="today" onclick="setKpiPeriode('today')">Aujourd'hui</button>
+        <button class="kpi-per" data-p="7j" onclick="setKpiPeriode('7j')">7 jours</button>
+        <button class="kpi-per" data-p="30j" onclick="setKpiPeriode('30j')">30 jours</button>
+        <button class="kpi-per" data-p="mois" onclick="setKpiPeriode('mois')">Ce mois</button>
+        <span style="color:var(--text2);font-size:13px;margin-left:6px">Du</span>
+        <input type="date" id="kpi-debut" class="kpi-date" onchange="chargerKPIPerso()">
+        <span style="color:var(--text2);font-size:13px">au</span>
+        <input type="date" id="kpi-fin" class="kpi-date" onchange="chargerKPIPerso()">
+      </div>
+    </div>
+    <div id="kpi-results"><div class="card"><div class="loading">Chargement…</div></div></div>`;
+  document.getElementById('kpi-debut').value=_kpiPeriode.debut;
+  document.getElementById('kpi-fin').value=_kpiPeriode.fin;
+  majKpiBtns(); chargerKPI();
+}
+async function chargerKPI(){
+  const box=document.getElementById('kpi-results'); if(!box) return;
+  box.innerHTML='<div class="card"><div class="loading">Chargement…</div></div>';
+  const d=await api('GET','/kpi?debut='+_kpiPeriode.debut+'&fin='+_kpiPeriode.fin).catch(()=>null);
+  if(!d||d.error){ box.innerHTML='<div class="card"><div class="loading">❌ Erreur de chargement des KPI</div></div>'; return; }
+  const g=d.global||{}, pr=d.prep||{};
+  const jours=[...new Set([...Object.keys(d.parJour||{}),...Object.keys(pr.parJour||{})])].sort().reverse();
+  const ligneJour=jours.map(j=>{ const L=(d.parJour||{})[j]||{total:0,livres:0,nonlivres:0}; const P=(pr.parJour||{})[j]||0; return `<tr><td>${fmtJour(j)}</td><td><b style="color:var(--gold)">${P}</b></td><td>${L.total}</td><td style="color:var(--green)">${L.livres}</td><td style="color:var(--red)">${L.nonlivres}</td></tr>`; }).join('')||'<tr><td colspan="5" class="muted">—</td></tr>';
+  const lignePrep=(pr.parPreparateur||[]).map(p=>`<tr><td><b>${esc(p.nom)}</b></td><td>${p.nb}</td></tr>`).join('')||'<tr><td colspan="2" class="muted">—</td></tr>';
+  box.innerHTML=`
+    <div class="kpi-sec">📦 LIVRAISONS</div>
     <div class="kpi-grid">
-      <div class="kpi"><div class="kpi-v" style="color:var(--gold)">${g.total||0}</div><div class="kpi-l">Livraisons totales</div></div>
+      <div class="kpi"><div class="kpi-v" style="color:var(--gold)">${g.total||0}</div><div class="kpi-l">Total livraisons</div></div>
       <div class="kpi"><div class="kpi-v" style="color:var(--green)">${g.livres||0}</div><div class="kpi-l">Livrées</div></div>
       <div class="kpi"><div class="kpi-v" style="color:var(--red)">${g.nonlivres||0}</div><div class="kpi-l">Non livrées</div></div>
+      <div class="kpi"><div class="kpi-v" style="color:#7b1fa2">${g.reportes||0}</div><div class="kpi-l">Reportées</div></div>
+      <div class="kpi"><div class="kpi-v" style="color:var(--text2)">${g.attente||0}</div><div class="kpi-l">En attente</div></div>
       <div class="kpi"><div class="kpi-v" style="color:var(--orange)">${g.tauxLivraison||0}%</div><div class="kpi-l">Taux de livraison</div></div>
-      <div class="kpi"><div class="kpi-v" style="color:var(--blue)">${g.totalColis||0}</div><div class="kpi-l">Colis</div></div>
-      <div class="kpi"><div class="kpi-v" style="color:var(--gold)">${g.nbSignatures||0}</div><div class="kpi-l">Signatures</div></div>
+    </div>
+    <div class="kpi-sec">🧰 PRÉPARATIONS <span style="font-weight:500;color:#8B9EC7">(à la date de préparation réelle)</span></div>
+    <div class="kpi-grid">
+      <div class="kpi"><div class="kpi-v" style="color:var(--gold)">${pr.total||0}</div><div class="kpi-l">BL préparés</div></div>
+    </div>
+    <div class="kpi-sec">🥤 PRODUITS</div>
+    <div class="kpi-grid">
+      <div class="kpi"><div class="kpi-v" style="color:var(--blue)">${g.totalColis||0}</div><div class="kpi-l">📦 Colis</div></div>
+      <div class="kpi"><div class="kpi-v">${g.totalBoissons||0}</div><div class="kpi-l">🥤 Boissons</div></div>
+      <div class="kpi"><div class="kpi-v">${g.totalCharbons||0}</div><div class="kpi-l">🔥 Charbons</div></div>
+      <div class="kpi"><div class="kpi-v">${g.totalPlv||0}</div><div class="kpi-l">🪧 PLV</div></div>
+      <div class="kpi"><div class="kpi-v">${g.totalTpe||0}</div><div class="kpi-l">💳 TPE</div></div>
+    </div>
+    <div class="card">
+      <h3>📅 Par jour</h3>
+      <div class="table-wrap"><table><thead><tr><th>Jour</th><th>🧰 Préparés</th><th>Livraisons</th><th>✅</th><th>❌</th></tr></thead>
+        <tbody>${ligneJour}</tbody></table></div>
+    </div>
+    <div class="card">
+      <h3>🚚 Par préparateur</h3>
+      <div class="table-wrap"><table><thead><tr><th>Préparateur</th><th>BL préparés</th></tr></thead>
+        <tbody>${lignePrep}</tbody></table></div>
     </div>
     <div class="card">
       <h3>📊 Par zone</h3>

@@ -1,7 +1,19 @@
 {
-  "version": "2026.06.26.13",
+  "version": "2026.06.26.14",
   "app": "AJCV Logistique",
   "historique": [
+    {
+      "v": "2026.06.26.14",
+      "date": "27/06/2026",
+      "titre": "Tableau de bord KPI complet + correction du filtre de dates (carte)",
+      "notes": [
+        "Onglet KPI entièrement refait : sélecteur de période (aujourd'hui / 7j / 30j / ce mois / perso).",
+        "Nouveau suivi des préparations : nombre de BL préparés sur la période (à la date de prépa réelle), par jour et par préparateur.",
+        "Nouveaux totaux produits : colis, boissons, charbons, PLV, TPE.",
+        "Tableaux par jour (préparés + livraisons), par zone, par livreur, clients souvent non livrés.",
+        "Carte : le filtre par dates fonctionne désormais correctement (bug de fuseau horaire corrigé)."
+      ]
+    },
     {
       "v": "2026.06.26.13",
       "date": "27/06/2026",
