@@ -96,6 +96,7 @@ td .qin{width:70px;padding:6px;text-align:center;border:1px solid var(--border);
     <input id="li-login" class="fld" autocapitalize="characters" autocomplete="username" placeholder="IDENTIFIANT">
     <label for="li-mdp">Mot de passe</label>
     <input id="li-mdp" class="fld" type="password" autocomplete="current-password" placeholder="••••••••">
+    <label style="display:flex;align-items:center;gap:8px;margin-top:14px;cursor:pointer;font-weight:500;color:var(--text)"><input type="checkbox" id="li-remember" checked style="width:18px;height:18px"> Se souvenir de moi</label>
     <button class="btn btn-block" id="li-btn">Se connecter</button>
     <div class="err" id="li-err"></div>
   </div>
@@ -107,6 +108,7 @@ td .qin{width:70px;padding:6px;text-align:center;border:1px solid var(--border);
     <div class="brand">🌿 <span>Production</span> CBD</div>
     <div style="display:flex;align-items:center;gap:10px">
       <div class="who" id="who"></div>
+      <button class="btn-ghost btn-sm" id="pwd" title="Changer mon mot de passe">🔑</button>
       <button class="btn-ghost btn-sm" id="logout">Quitter</button>
     </div>
   </div>
@@ -132,7 +134,22 @@ const API = API_BASE;
 
 // ── État ──
 const S = { token:'', user:null, mode:'', config:null, tab:'' };
-const LS_KEY = 'ajcv_cbd_session';
+const SESSION_KEY='ajcv_cbd_session', LOGIN_KEY='ajcv_cbd_login', REMEMBER_KEY='ajcv_cbd_remember';
+function saveSession(remember){
+  const payload = JSON.stringify({ token:S.token, user:S.user });
+  try {
+    if (remember){ localStorage.setItem(SESSION_KEY, payload); sessionStorage.removeItem(SESSION_KEY); }
+    else { sessionStorage.setItem(SESSION_KEY, payload); localStorage.removeItem(SESSION_KEY); }
+  } catch(_){}
+}
+function lireSession(){ try { return localStorage.getItem(SESSION_KEY) || sessionStorage.getItem(SESSION_KEY); } catch(_){ return null; } }
+function effacerSession(){ try { localStorage.removeItem(SESSION_KEY); sessionStorage.removeItem(SESSION_KEY); } catch(_){} }
+function prefillLogin(){
+  try {
+    const l=localStorage.getItem(LOGIN_KEY); if(l && $('li-login')) $('li-login').value=l;
+    if($('li-remember')) $('li-remember').checked = (localStorage.getItem(REMEMBER_KEY)!=='0');
+  } catch(_){}
+}
 
 // ── Helpers ──
 const $ = id => document.getElementById(id);
@@ -151,6 +168,7 @@ async function api(method, path, body){
   let data = {};
   try { data = await r.json(); } catch(_){ data = {}; }
   if (!r.ok && !data.error) data.error = 'Erreur '+r.status;
+  data._status = r.status;
   return data;
 }
 
@@ -170,28 +188,39 @@ async function connexion(){
   try { res = await (await fetch(API+'/auth/login',{ method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({login, mdp}) })).json(); }
   catch(e){ res = { error:'Réseau indisponible' }; }
   $('li-btn').textContent='Se connecter'; $('li-btn').disabled=false;
-  if (!res || res.error || !res.token){ $('li-err').textContent = (res&&res.error) || 'Connexion impossible'; return; }
+  if (!res || res.error || !res.token){ $('li-err').textContent = (res&&res.error) || 'Identifiant ou mot de passe incorrect'; return; }
   S.token = res.token; S.user = res;
   // Vérifier l'accès Production (cbdAccess) + charger la config
   const cfg = await api('GET','/cbd/config');
-  if (cfg.error){ $('li-err').textContent = 'Accès Production refusé pour ce compte'; S.token=''; S.user=null; return; }
+  if (cfg.error){
+    S.token=''; S.user=null;
+    if (cfg._status===404)      $('li-err').textContent = 'Module Production absent du backend (route /cbd manquante). Le bloc cbd_backend.js doit être déployé sur le backend test.';
+    else if (cfg._status===403) $('li-err').textContent = "Ce compte n'a pas accès au module Production.";
+    else                        $('li-err').textContent = 'Production indisponible : '+(cfg.error||'erreur');
+    return;
+  }
   S.config = cfg.config || {};
   S.mode = ['Admin','Depot'].includes(res.role) ? 'responsable' : 'preparateur';
-  try { localStorage.setItem(LS_KEY, JSON.stringify({ token:S.token, user:S.user })); } catch(_){}
+  const remember = $('li-remember') ? $('li-remember').checked : true;
+  try { localStorage.setItem(LOGIN_KEY, login); localStorage.setItem(REMEMBER_KEY, remember?'1':'0'); } catch(_){}
+  saveSession(remember);
   demarrer();
 }
 
 function deconnexion(expired){
   S.token=''; S.user=null; S.mode=''; S.config=null;
-  try { localStorage.removeItem(LS_KEY); } catch(_){}
+  effacerSession();
   $('app').classList.add('hidden'); $('login').classList.remove('hidden');
+  prefillLogin(); $('li-mdp').value='';
   if (expired) $('li-err').textContent='Session expirée, reconnecte-toi.';
 }
 $('logout').onclick = ()=>deconnexion(false);
+$('pwd').onclick = formMotDePasse;
 
 // Reprise de session
 (async function reprise(){
-  let s=null; try { s=JSON.parse(localStorage.getItem(LS_KEY)||'null'); } catch(_){}
+  prefillLogin();
+  let s=null; try { s=JSON.parse(lireSession()||'null'); } catch(_){}
   if (s && s.token){
     S.token=s.token; S.user=s.user;
     const cfg = await api('GET','/cbd/config');
@@ -540,6 +569,38 @@ async function supprimerAtelier(id){
   if(r.error){ toast('❌ '+r.error); return; }
   toast('🗑️ Atelier supprimé'); chargerAteliers();
 }
+
+// ── Changement de mot de passe (self-service) ──
+function formMotDePasse(){
+  const bg=document.createElement('div'); bg.className='modal-bg';
+  bg.innerHTML=`<div class="modal">
+    <h3>🔑 Changer mon mot de passe</h3>
+    <label>Mot de passe actuel</label><input id="mp-old" class="fld" type="password" autocomplete="current-password">
+    <label>Nouveau mot de passe</label><input id="mp-new" class="fld" type="password" autocomplete="new-password" placeholder="6 caractères minimum">
+    <label>Confirmer le nouveau</label><input id="mp-new2" class="fld" type="password" autocomplete="new-password">
+    <div class="err" id="mp-err"></div>
+    <div class="modal-actions">
+      <button class="btn-ghost" id="mp-cancel">Annuler</button>
+      <button class="btn" id="mp-save">Enregistrer</button>
+    </div>
+  </div>`;
+  document.body.appendChild(bg);
+  const close=()=>bg.remove();
+  bg.querySelector('#mp-cancel').onclick=close;
+  bg.onclick=ev=>{ if(ev.target===bg) close(); };
+  bg.querySelector('#mp-save').onclick=async ()=>{
+    const ancien=bg.querySelector('#mp-old').value, nouveau=bg.querySelector('#mp-new').value, conf=bg.querySelector('#mp-new2').value;
+    const err=bg.querySelector('#mp-err');
+    if(!ancien||!nouveau){ err.textContent='Tous les champs sont requis'; return; }
+    if(nouveau.length<6){ err.textContent='Le nouveau mot de passe doit faire au moins 6 caractères'; return; }
+    if(nouveau!==conf){ err.textContent='Les deux nouveaux mots de passe ne correspondent pas'; return; }
+    const save=bg.querySelector('#mp-save'); save.textContent='…'; save.disabled=true; err.textContent='';
+    const r=await api('POST','/auth/change-password',{ancien,nouveau});
+    if(r.error){ save.disabled=false; save.textContent='Enregistrer'; err.textContent='❌ '+r.error; return; }
+    close(); toast('✅ Mot de passe modifié');
+  };
+}
+
 </script>
 </body>
 </html>
