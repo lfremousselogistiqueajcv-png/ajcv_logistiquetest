@@ -102,9 +102,22 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .ptab.active .ptab-n{background:rgba(0,0,0,.22)}
 .btn-prendre{width:100%;background:var(--gold);color:var(--navy);border:none;border-radius:10px;padding:13px;font-size:15px;font-weight:800;cursor:pointer;margin-top:2px}
 .btn-relacher{background:none;border:none;color:var(--text2);font-size:12.5px;cursor:pointer;padding:8px 6px 2px;text-decoration:underline;align-self:flex-start}
+/* MODE CLAIR (accessibilite haute lisibilite) */
+html[data-theme="light"]{
+  --dark:#EDF1F7; --surface:#FFFFFF; --surface2:#EBEFF5; --surface3:#DCE2EC;
+  --navy:#E3E8F2; --navy2:#D5DCEA;
+  --text:#0F172A; --text2:#475569; --text3:#64748B;
+  --border:rgba(15,23,42,0.14);
+}
+#theme-btn{position:fixed;bottom:20px;left:20px;z-index:10001;width:46px;height:46px;border-radius:50%;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:21px;box-shadow:0 4px 16px rgba(0,0,0,.3);display:flex;align-items:center;justify-content:center;cursor:pointer}
+#theme-btn:active{transform:scale(.94)}
+#test-banner{position:fixed;top:0;left:0;right:0;z-index:10002;background:#A855F7;color:#fff;font:600 13px/1.4 Arial,sans-serif;text-align:center;padding:6px 10px;box-shadow:0 2px 8px rgba(0,0,0,.35)}
 </style>
+<script>try{var _t=localStorage.getItem('ajcv_theme')||((window.matchMedia&&matchMedia('(prefers-color-scheme: light)').matches)?'light':'dark');document.documentElement.setAttribute('data-theme',_t);}catch(e){}</script>
 </head>
 <body>
+<button id="theme-btn" title="Mode clair / sombre (accessibilite)" aria-label="Basculer le mode clair ou sombre">☀️</button>
+
 
 <!-- ══ LOGIN ══ -->
 <div id="login">
@@ -162,22 +175,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 <div id="toast"></div>
 
 <script>
-// ════════════════════════════════════════
-// ENVIRONNEMENT DE TEST — backend de test, données fictives.
-// ════════════════════════════════════════
-const API_BASE = 'https://ajcvbackend-test-production.up.railway.app';
-(function(){
-  var show = function(){
-    if (document.getElementById('ajcv-test-banner')) return;
-    var b = document.createElement('div');
-    b.id = 'ajcv-test-banner';
-    b.textContent = '🧪 ENVIRONNEMENT DE TEST · build 26/06-11 — données fictives, sans impact prod';
-    b.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;background:#7c3aed;color:#fff;font:600 13px/1.4 Arial,sans-serif;text-align:center;padding:6px 10px;display:block;box-shadow:0 2px 8px rgba(0,0,0,.3)';
-    document.body.appendChild(b); document.body.style.paddingTop='32px';
-  };
-  if (document.body) show(); else document.addEventListener('DOMContentLoaded', show);
-})();
-const CFG = { API_URL: API_BASE };
+const CFG = { API_URL: 'https://ajcvbackend-test-production.up.railway.app' };
 const VERSION_URL = 'version.json';
 const state = { token:'', prenom:'', login:'', role:'', tokenExpiry:0, orders:[], photos:{}, search:'', _date:'', volet:'apreparer', boissonsRef:[], _boId:null };
 
@@ -604,6 +602,12 @@ if('serviceWorker' in navigator){
   const sw=`self.addEventListener('install',e=>self.skipWaiting());self.addEventListener('activate',e=>e.waitUntil(clients.claim()));self.addEventListener('fetch',e=>e.respondWith(fetch(e.request).catch(()=>new Response('Hors ligne'))));`;
   try{ navigator.serviceWorker.register(URL.createObjectURL(new Blob([sw],{type:'application/javascript'}))).catch(()=>{}); }catch(_){}
 }
+</script>
+<script>document.addEventListener('DOMContentLoaded',function(){var b=document.createElement('div');b.id='test-banner';b.textContent='🧪 ENVIRONNEMENT DE TEST — données fictives, sans impact prod';document.body.appendChild(b);document.body.style.paddingTop='32px';});</script>
+<script>
+(function(){function ap(t){document.documentElement.setAttribute('data-theme',t);var b=document.getElementById('theme-btn');if(b)b.textContent=(t==='light'?'🌙':'☀️');}
+function tg(){var c=document.documentElement.getAttribute('data-theme')==='light'?'light':'dark';var n=c==='light'?'dark':'light';try{localStorage.setItem('ajcv_theme',n);}catch(_){}ap(n);}
+ap(document.documentElement.getAttribute('data-theme')||'dark');var b=document.getElementById('theme-btn');if(b)b.onclick=tg;})();
 </script>
 </body>
 </html>
