@@ -46,6 +46,7 @@ label{display:block;font-size:12px;font-weight:600;color:var(--text2);margin:12p
 .btn-gold{background:var(--gold);color:#1a1300}
 .btn-ghost{background:var(--surface2);color:var(--text);border:1px solid var(--border)}
 .btn-blue{background:var(--blue);color:#04122e}
+.btn-danger{background:var(--red);color:#fff}
 .btn-sm{padding:7px 11px;font-size:13px;font-weight:600}
 .btn-icon{background:transparent;border:none;font-size:16px;padding:4px 6px;color:var(--text2)}
 .btn-icon:hover{color:var(--text)}
@@ -252,7 +253,7 @@ async function connexion(){
     else $('li-err').textContent='Production indisponible : '+(cfg.error||'erreur');
     return;
   }
-  S.config=cfg; S.mode=['Admin','Depot'].includes(res.role)?'responsable':'preparateur';
+  S.config=cfg; S.mode=calcMode(res.role);
   const remember=$('li-remember')?$('li-remember').checked:true;
   try{ localStorage.setItem(LOGIN_KEY,login); localStorage.setItem(REMEMBER_KEY,remember?'1':'0'); }catch(_){}
   saveSession(remember); demarrer();
@@ -272,17 +273,18 @@ $('pwd').onclick=formMotDePasse;
   let s=null; try{ s=JSON.parse(lireSession()||'null'); }catch(_){}
   if(s&&s.token){ S.token=s.token; S.user=s.user;
     const cfg=await api('GET','/cbd/config');
-    if(!cfg.error){ S.config=cfg; S.mode=['Admin','Depot'].includes(s.user.role)?'responsable':'preparateur'; demarrer(); }
+    if(!cfg.error){ S.config=cfg; S.mode=calcMode(s.user.role); demarrer(); }
     else deconnexion(false);
   }
 })();
 
 // ════════════ NAVIGATION ════════════
+function calcMode(role){ const p=(new URLSearchParams(location.search).get('vue')||'').toLowerCase(); S.forced=(p==='preparateur'||p==='prepa'); if(S.forced)return 'preparateur'; return ['Admin','Depot'].includes(role)?'responsable':'preparateur'; }
 let TABS=[];
 function demarrer(){
   $('login').classList.add('hidden'); $('app').classList.remove('hidden');
   const u=S.user;
-  $('who').innerHTML=esc((u.prenom||'')+' '+(u.nom||'')).trim()+'<br>'+(S.mode==='responsable'?'Responsable':'Préparateur');
+  $('who').innerHTML=esc((u.prenom||'')+' '+(u.nom||'')).trim()+'<br>'+(S.mode==='responsable'?'Responsable':'Préparateur'+(S.forced&&['Admin','Depot'].includes(u.role)?' · aperçu':''));
   if(S.mode==='responsable'){
     TABS=[
       {id:'dash',label:'📊 Tableau de bord',render:renderDashboard},
@@ -345,6 +347,19 @@ function openForm(title, fields, cur, onSave){
     const fail=m=>{ errEl.textContent='❌ '+m; sv.disabled=false; sv.textContent='Enregistrer'; };
     try{ await onSave(vals, close, fail); }catch(e){ fail(e.message||String(e)); }
   };
+}
+
+// Modale de confirmation (remplace confirm() — plus claire, accessible)
+function confirmModal(message, onYes, danger){
+  const bg=document.createElement('div'); bg.className='modal-bg';
+  bg.innerHTML=`<div class="modal" style="max-width:420px">
+    <h3>${danger?'⚠️ Supprimer':'Confirmer'}</h3>
+    <p style="color:var(--text2);line-height:1.5;margin-bottom:4px">${esc(message)}</p>
+    <div class="modal-actions"><button class="btn-ghost" data-no>Annuler</button><button class="btn ${danger?'btn-danger':''}" data-yes>${danger?'Supprimer':'Confirmer'}</button></div></div>`;
+  document.body.appendChild(bg);
+  const close=()=>bg.remove();
+  bg.querySelector('[data-no]').onclick=close; bg.onclick=e=>{ if(e.target===bg)close(); };
+  bg.querySelector('[data-yes]').onclick=()=>{ close(); onYes(); };
 }
 
 // ════════════════════════════════════════════════════════════
@@ -457,62 +472,80 @@ function renderStock(){
   const resp=S.mode==='responsable';
   $('content').innerHTML=`
     <div class="card">
-      <h3>📋 Stock du jour
-        <span class="actions"><input type="date" id="st-date" class="fld" style="width:auto;padding:8px 10px" value="${_stockDate}"><button class="btn-ghost btn-sm" id="st-refresh">🔄</button></span>
+      <h3>📋 Stock journalier &amp; ventes
+        <span class="actions"><input type="date" id="st-date" class="fld" style="width:auto;padding:8px 10px" value="${_stockDate}"><button class="btn-ghost btn-sm" id="st-refresh">🔄</button>${resp?'<button class="btn btn-sm" id="st-saveall">💾 Tout enregistrer</button>':''}</span>
       </h3>
       <div class="kpis" id="st-kpis"></div>
       <div id="st-body"><div class="loading">Chargement…</div></div>
-      ${resp?'<div class="hint">Saisis le comptage du matin → « à produire » (= cible − stock) et les priorités se calculent automatiquement. Le relevé Odoo est optionnel : l\'écart aide à fiabiliser l\'inventaire.</div>':''}
+      ${resp?'<div class="hint">Chaque jour, saisis le <b>stock relevé dans Odoo</b> par référence. L\'appli en déduit les <b>ventes du jour</b> (= stock de la veille + production du jour − stock du jour) et l\'<b>à produire</b> (= cible − stock). Produire doit couvrir les ventes <i>et</i> remettre au niveau cible.</div>':''}
     </div>`;
   $('st-date').onchange=e=>{ _stockDate=e.target.value; chargerStock(); };
-  $('st-refresh').onclick=chargerStock; chargerStock();
+  $('st-refresh').onclick=chargerStock;
+  if(resp&&$('st-saveall'))$('st-saveall').onclick=enregistrerToutStock;
+  chargerStock();
 }
 async function chargerStock(){
   const resp=S.mode==='responsable', body=$('st-body'); body.innerHTML='<div class="loading">Chargement…</div>';
   const d=await api('GET','/cbd/stock-jour?date='+_stockDate);
   if(d.error){ body.innerHTML='<div class="empty">❌ '+esc(d.error)+'</div>'; return; }
-  const L=d.lignes||[]; let nbU=0,aP=0,pr=0,nc=0;
-  L.forEach(l=>{ if(l.priorite==='urgent')nbU++; aP+=(l.a_produire||0); pr+=(l.produit_auj||0); if(!l.saisi)nc++; });
+  const L=d.lignes||[]; let nbU=0,aP=0,pr=0,nc=0,vt=0,vtK=false;
+  L.forEach(l=>{ if(l.priorite==='urgent')nbU++; aP+=(l.a_produire||0); pr+=(l.produit_auj||0); if(!l.saisi)nc++; if(l.ventes!=null){vt+=l.ventes;vtK=true;} });
+  const bilan= vtK ? (pr>=vt?'<span class="badge b-ok">✅ ≥ ventes</span>':'<span class="badge b-urgent">⚠️ &lt; ventes</span>') : '';
   $('st-kpis').innerHTML=`
     <div class="kpi"><div class="kpi-v">${L.length}</div><div class="kpi-l">Références</div></div>
     <div class="kpi k-red"><div class="kpi-v">${nbU}</div><div class="kpi-l">🔴 Urgent</div></div>
     <div class="kpi k-orange"><div class="kpi-v">${aP}</div><div class="kpi-l">À produire</div></div>
-    <div class="kpi k-green"><div class="kpi-v">${pr}</div><div class="kpi-l">Produit aujourd'hui</div></div>
-    ${nc?`<div class="kpi"><div class="kpi-v" style="color:var(--text2)">${nc}</div><div class="kpi-l">Non comptés</div></div>`:''}`;
+    <div class="kpi k-green"><div class="kpi-v">${pr}</div><div class="kpi-l">Produit du jour</div></div>
+    <div class="kpi k-blue"><div class="kpi-v">${vtK?vt:'—'}</div><div class="kpi-l">Ventes du jour ${bilan}</div></div>
+    ${nc?`<div class="kpi"><div class="kpi-v" style="color:var(--text2)">${nc}</div><div class="kpi-l">Non saisis</div></div>`:''}`;
   if(!L.length){ body.innerHTML='<div class="empty">Aucun produit actif. Ajoute des produits dans le 🗂️ Référentiel.</div>'; return; }
-  const head=`<tr><th>Réf.</th><th>Variété</th><th>Format</th><th>Compté</th><th>Cible</th><th>À produire</th><th>Priorité</th><th>Fait</th><th>Reste</th>${resp?'<th>Relevé Odoo</th><th>Écart</th><th></th>':''}</tr>`;
+  const head=resp
+    ? `<tr><th>Réf.</th><th>Variété</th><th>Format</th><th>Stock veille</th><th>Stock du jour (Odoo)</th><th>Cible</th><th>À produire</th><th>Priorité</th><th>Produit</th><th>Ventes est.</th><th>Reste</th><th></th></tr>`
+    : `<tr><th>Réf.</th><th>Variété</th><th>Format</th><th>Stock du jour</th><th>À produire</th><th>Priorité</th><th>Produit</th><th>Reste</th></tr>`;
   body.innerHTML=`<div class="table-wrap"><table><thead>${head}</thead><tbody>${L.map(l=>{
-    const ec=l.ecart_odoo!=null?((l.ecart_odoo>0?'+':'')+l.ecart_odoo):'—';
     if(resp) return `<tr data-pid="${l.produit_id}">
       <td><b>${esc(l.code||'')}</b><br><span class="small muted">${esc(l.designation||'')}</span></td>
       <td>${esc(l.variete_nom||'—')}</td><td>${l.format_g!=null?l.format_g+' g':'—'}</td>
+      <td>${l.stock_veille!=null?l.stock_veille:'<span class="muted">—</span>'}</td>
       <td><input class="qin st-c" type="number" min="0" inputmode="numeric" value="${l.stock_compte!=null?l.stock_compte:''}"></td>
       <td>${l.stock_cible||0}</td><td><b>${l.a_produire!=null?l.a_produire:'—'}</b></td>
-      <td>${prioBadge(l.priorite)}</td><td>${l.produit_auj||0}</td><td>${l.reste!=null?l.reste:'—'}</td>
-      <td><input class="qin st-o" type="number" min="0" inputmode="numeric" value="${l.releve_odoo!=null?l.releve_odoo:''}"></td>
-      <td>${ec}</td><td><button class="btn btn-sm st-save">💾</button></td></tr>`;
+      <td>${prioBadge(l.priorite)}</td><td>${l.produit_auj||0}</td>
+      <td>${l.ventes!=null?'<b>'+l.ventes+'</b>':'—'}</td>
+      <td>${l.reste!=null?l.reste:'—'}</td>
+      <td><button class="btn btn-sm st-save">💾</button></td></tr>`;
     return `<tr><td><b>${esc(l.code||'')}</b><br><span class="small muted">${esc(l.designation||'')}</span></td>
       <td>${esc(l.variete_nom||'—')}</td><td>${l.format_g!=null?l.format_g+' g':'—'}</td>
-      <td>${l.stock_compte!=null?l.stock_compte:'—'}</td><td>${l.stock_cible||0}</td><td><b>${l.a_produire!=null?l.a_produire:'—'}</b></td>
+      <td>${l.stock_compte!=null?l.stock_compte:'—'}</td><td><b>${l.a_produire!=null?l.a_produire:'—'}</b></td>
       <td>${prioBadge(l.priorite)}</td><td>${l.produit_auj||0}</td><td>${l.reste!=null?l.reste:'—'}</td></tr>`;
   }).join('')}</tbody></table></div>`;
   if(resp) body.querySelectorAll('.st-save').forEach(btn=>btn.onclick=async ()=>{
-    const tr=btn.closest('tr'), c=tr.querySelector('.st-c').value, o=tr.querySelector('.st-o').value;
+    const tr=btn.closest('tr'), c=tr.querySelector('.st-c').value;
     btn.textContent='…'; btn.disabled=true;
-    const r=await api('POST','/cbd/stock-jour',{produit_id:tr.dataset.pid,date_jour:_stockDate,stock_compte:c===''?0:num(c),releve_odoo:o===''?null:num(o)});
+    const r=await api('POST','/cbd/stock-jour',{produit_id:tr.dataset.pid,date_jour:_stockDate,stock_compte:c===''?0:num(c)});
     btn.disabled=false; btn.textContent='💾';
     if(r.error){ toast('❌ '+r.error); return; } toast('✅ Enregistré'); chargerStock();
   });
+}
+async function enregistrerToutStock(){
+  const rows=document.querySelectorAll('#st-body tr[data-pid]'), todo=[];
+  rows.forEach(tr=>{ const c=tr.querySelector('.st-c'); if(c&&c.value!=='') todo.push({produit_id:tr.dataset.pid,stock_compte:num(c.value)}); });
+  if(!todo.length){ toast('Rien à enregistrer'); return; }
+  const b=$('st-saveall'); b.textContent='…'; b.disabled=true; let ok=0;
+  for(const t of todo){ const r=await api('POST','/cbd/stock-jour',{produit_id:t.produit_id,date_jour:_stockDate,stock_compte:t.stock_compte}); if(!r.error)ok++; }
+  b.disabled=false; b.textContent='💾 Tout enregistrer';
+  toast('✅ '+ok+'/'+todo.length+' enregistré(s)'); chargerStock();
 }
 
 // ════════════════════════════════════════════════════════════
 // SAISIE PRODUCTION
 // ════════════════════════════════════════════════════════════
+let _prodDate=todayISO();
 async function renderSaisie(){
   $('content').innerHTML=`
     <div class="card"><h3>➕ Nouvelle production</h3><div id="sa-form"><div class="loading">Chargement…</div></div></div>
-    <div class="card"><h3>📦 Productions du jour <button class="btn-ghost btn-sm" id="sa-refresh">🔄</button></h3><div id="sa-list"><div class="loading">Chargement…</div></div></div>`;
+    <div class="card"><h3>📦 Journal de production <span class="actions"><input type="date" id="sa-listdate" class="fld" style="width:auto;padding:8px 10px" value="${_prodDate}"><button class="btn-ghost btn-sm" id="sa-refresh">🔄</button></span></h3><div id="sa-list"><div class="loading">Chargement…</div></div></div>`;
   $('sa-refresh').onclick=chargerProdJour;
+  if($('sa-listdate'))$('sa-listdate').onchange=e=>{ _prodDate=e.target.value; chargerProdJour(); };
   const [a,p,r]=await Promise.all([api('GET','/cbd/ateliers'),api('GET','/cbd/produits'),api('GET','/cbd/receptions')]);
   S.refs.ateliers=(a.ateliers||[]).filter(x=>x.actif!==false);
   S.refs.produits=(p.produits||[]).filter(x=>x.actif!==false);
@@ -560,18 +593,39 @@ async function submitProd(){
 }
 async function chargerProdJour(){
   const list=$('sa-list'); list.innerHTML='<div class="loading">Chargement…</div>';
-  const d=await api('GET','/cbd/productions?date='+todayISO());
+  const d=await api('GET','/cbd/productions?date='+_prodDate);
   if(d.error){ list.innerHTML='<div class="empty">❌ '+esc(d.error)+'</div>'; return; }
-  const P=d.productions||[]; if(!P.length){ list.innerHTML='<div class="empty">Aucune production aujourd\'hui.</div>'; return; }
+  const P=d.productions||[]; if(!P.length){ list.innerHTML='<div class="empty">Aucune production ce jour.</div>'; return; }
   const resp=S.mode==='responsable';
-  list.innerHTML=`<div class="table-wrap"><table><thead><tr><th>Atelier</th><th>Produit</th><th>Qté</th><th>Lot pochon</th><th>Vrac</th><th>Rdt</th><th>Temps</th><th>Par</th><th></th></tr></thead><tbody>
+  const totQ=P.reduce((s,p)=>s+(p.quantite||0),0);
+  list.innerHTML=`<div class="small muted" style="margin-bottom:8px">${P.length} saisie(s) · ${totQ} unités</div><div class="table-wrap"><table><thead><tr><th>Atelier</th><th>Produit</th><th>Qté</th><th>Lot pochon</th><th>Vrac</th><th>Rdt</th><th>Temps</th><th>Par</th><th></th></tr></thead><tbody>
     ${P.map(p=>`<tr><td>${esc(p.atelier_nom||'—')}</td><td><b>${esc(p.produit_code||'')}</b> ${esc(p.produit_designation||'')}</td>
       <td><b>${p.quantite}</b> ${esc(p.atelier_unite||'')}</td><td>${esc(p.lot_pochon||'—')}</td>
       <td>${p.vrac_engage_kg!=null?p.vrac_engage_kg+' kg':'—'}${p.lot_vrac_source?'<br><span class="small muted">'+esc(p.lot_vrac_source)+'</span>':''}</td>
       <td>${p.rendement!=null?Math.round(p.rendement*100)+'%':'—'}</td><td>${p.temps_min!=null?p.temps_min+' min':'—'}</td><td>${esc(p.preparateur||'')}</td>
-      <td>${(resp||p.preparateur===S.user.login)?`<button class="btn-icon sa-del" data-id="${p.id}">🗑️</button>`:''}</td></tr>`).join('')}
+      <td style="white-space:nowrap">${(resp||p.preparateur===S.user.login)?`<button class="btn-icon sa-edit" data-id="${p.id}">✏️</button><button class="btn-icon sa-del" data-id="${p.id}">🗑️</button>`:''}</td></tr>`).join('')}
   </tbody></table></div>`;
-  list.querySelectorAll('.sa-del').forEach(b=>b.onclick=async ()=>{ if(!confirm('Supprimer cette production ?'))return; const r=await api('DELETE','/cbd/productions/'+b.dataset.id); if(r.error){toast('❌ '+r.error);return;} toast('🗑️ Supprimée'); chargerProdJour(); });
+  list.querySelectorAll('.sa-edit').forEach(b=>b.onclick=()=>formProduction(P.find(x=>x.id===b.dataset.id)));
+  list.querySelectorAll('.sa-del').forEach(b=>b.onclick=()=>confirmModal('Supprimer cette production ?', async ()=>{ const r=await api('DELETE','/cbd/productions/'+b.dataset.id); if(r.error){toast('❌ '+r.error);return;} toast('🗑️ Supprimée'); chargerProdJour(); }, true));
+}
+function formProduction(p){
+  if(!p)return;
+  const oa=[{value:'',label:'— atelier —'}].concat((S.refs.ateliers||[]).map(a=>({value:a.id,label:a.nom})));
+  const orc=[{value:'',label:'— aucune —'}].concat((S.refs.receptions||[]).map(r=>({value:r.id,label:(r.lot_vrac||'')+(r.stock_vrac_restant!=null?' (reste '+r.stock_vrac_restant+' kg)':'')})));
+  openForm('Modifier la production'+(p.produit_code?' — '+p.produit_code:''),[
+    {key:'atelier_id',label:'Atelier',type:'select',options:oa},
+    {key:'quantite',label:'Quantité',type:'number',min:1},
+    {key:'lot_pochon',label:'N° lot pochon (option)'},
+    {key:'reception_id',label:'Lot vrac source (option)',type:'select',options:orc},
+    {key:'vrac_engage_kg',label:'Vrac engagé (kg, option)',type:'number',step:'0.001'},
+    {key:'temps_min',label:'Temps passé (min, option)',type:'number'},
+  ], {atelier_id:p.atelier_id,quantite:p.quantite,lot_pochon:p.lot_pochon,reception_id:p.reception_id,vrac_engage_kg:p.vrac_engage_kg,temps_min:p.temps_min},
+  async (v,close,fail)=>{
+    if(!v.quantite||num(v.quantite)<=0)return fail('Quantité invalide');
+    const body={atelier_id:v.atelier_id||null,quantite:num(v.quantite),lot_pochon:v.lot_pochon||null,reception_id:v.reception_id||null,vrac_engage_kg:(v.vrac_engage_kg===''||v.vrac_engage_kg==null)?null:num(v.vrac_engage_kg),temps_min:(v.temps_min===''||v.temps_min==null)?null:num(v.temps_min)};
+    const r=await api('PATCH','/cbd/productions/'+p.id,body);
+    if(r.error)return fail(r.error); close(); toast('✅ Production modifiée'); chargerProdJour();
+  });
 }
 
 // ════════════════════════════════════════════════════════════
@@ -608,7 +662,7 @@ async function chargerReceptions(){
         <td style="white-space:nowrap"><button class="btn-icon rc-e" data-id="${r.id}">✏️</button><button class="btn-icon rc-d" data-id="${r.id}">🗑️</button></td></tr>`).join('')}
     </tbody></table></div>`;
   body.querySelectorAll('.rc-e').forEach(b=>b.onclick=()=>formReception(R.find(x=>x.id===b.dataset.id)));
-  body.querySelectorAll('.rc-d').forEach(b=>b.onclick=async ()=>{ if(!confirm('Supprimer cette réception ?'))return; const r=await api('DELETE','/cbd/receptions/'+b.dataset.id); if(r.error){toast('❌ '+r.error);return;} toast('🗑️ Supprimée'); chargerReceptions(); });
+  body.querySelectorAll('.rc-d').forEach(b=>b.onclick=()=>confirmModal('Supprimer cette réception ?', async ()=>{ const r=await api('DELETE','/cbd/receptions/'+b.dataset.id); if(r.error){toast('❌ '+r.error);return;} toast('🗑️ Supprimée'); chargerReceptions(); }, true));
 }
 function formReception(r){
   const fo=[{value:'',label:'— fournisseur —'}].concat((S.refs.fournisseurs||[]).map(f=>({value:f.id,label:f.nom})));
@@ -651,7 +705,7 @@ async function chargerAteliers(){
       <td style="white-space:nowrap"><button class="btn-icon at-e" data-id="${a.id}">✏️</button><button class="btn-icon at-d" data-id="${a.id}">🗑️</button></td></tr>`).join('')}
   </tbody></table></div>`;
   body.querySelectorAll('.at-e').forEach(b=>b.onclick=()=>formAtelier(A.find(x=>x.id===b.dataset.id)));
-  body.querySelectorAll('.at-d').forEach(b=>b.onclick=async ()=>{ if(!confirm('Supprimer cet atelier ?\n(impossible s\'il a des productions — désactive-le plutôt)'))return; const r=await api('DELETE','/cbd/ateliers/'+b.dataset.id); if(r.error){toast('❌ '+r.error);return;} toast('🗑️ Supprimé'); chargerAteliers(); });
+  body.querySelectorAll('.at-d').forEach(b=>b.onclick=()=>confirmModal('Supprimer cet atelier ?\n(impossible s\'il a des productions — désactive-le plutôt)', async ()=>{ const r=await api('DELETE','/cbd/ateliers/'+b.dataset.id); if(r.error){toast('❌ '+r.error);return;} toast('🗑️ Supprimé'); chargerAteliers(); }, true));
 }
 function formAtelier(a){
   openForm(a?'Modifier l\'atelier':'Nouvel atelier',[
@@ -699,7 +753,7 @@ async function refProduits(){
     </tbody></table></div>`:'<div class="empty">Aucun produit. Clique « Produit ».</div>'}</div>`;
   $('p-add').onclick=()=>formProduit(null);
   body.querySelectorAll('.p-e').forEach(b=>b.onclick=()=>formProduit(P.find(x=>x.id===b.dataset.id)));
-  body.querySelectorAll('.p-d').forEach(b=>b.onclick=async ()=>{ if(!confirm('Supprimer ce produit ?\n(désactive-le plutôt s\'il a un historique)'))return; const r=await api('DELETE','/cbd/produits/'+b.dataset.id); if(r.error){toast('❌ '+r.error);return;} toast('🗑️ Supprimé'); refProduits(); });
+  body.querySelectorAll('.p-d').forEach(b=>b.onclick=()=>confirmModal('Supprimer ce produit ?\n(désactive-le plutôt s\'il a un historique)', async ()=>{ const r=await api('DELETE','/cbd/produits/'+b.dataset.id); if(r.error){toast('❌ '+r.error);return;} toast('🗑️ Supprimé'); refProduits(); }, true));
 }
 function formProduit(x){
   const vo=[{value:'',label:'— variété —'}].concat((S.refs.varietes||[]).map(v=>({value:v.id,label:v.nom})));
@@ -738,7 +792,7 @@ async function refVarietes(){
     </tbody></table></div>`:'<div class="empty">Aucune variété. Clique « Variété ».</div>'}</div>`;
   $('v-add').onclick=()=>formVariete(null);
   body.querySelectorAll('.v-e').forEach(b=>b.onclick=()=>formVariete(V.find(x=>x.id===b.dataset.id)));
-  body.querySelectorAll('.v-d').forEach(b=>b.onclick=async ()=>{ if(!confirm('Supprimer cette variété ?'))return; const r=await api('DELETE','/cbd/varietes/'+b.dataset.id); if(r.error){toast('❌ '+r.error);return;} toast('🗑️ Supprimée'); refVarietes(); });
+  body.querySelectorAll('.v-d').forEach(b=>b.onclick=()=>confirmModal('Supprimer cette variété ?', async ()=>{ const r=await api('DELETE','/cbd/varietes/'+b.dataset.id); if(r.error){toast('❌ '+r.error);return;} toast('🗑️ Supprimée'); refVarietes(); }, true));
 }
 function formVariete(x){
   const f=[{key:'nom',label:'Nom',placeholder:'ex. OG Kush'},{key:'ordre',label:'Ordre',type:'number'}];
@@ -761,7 +815,7 @@ async function refFournisseurs(){
     </tbody></table></div>`:'<div class="empty">Aucun fournisseur. Clique « Fournisseur ».</div>'}</div>`;
   $('f-add').onclick=()=>formFournisseur(null);
   body.querySelectorAll('.f-e').forEach(b=>b.onclick=()=>formFournisseur(F.find(x=>x.id===b.dataset.id)));
-  body.querySelectorAll('.f-d').forEach(b=>b.onclick=async ()=>{ if(!confirm('Supprimer ce fournisseur ?'))return; const r=await api('DELETE','/cbd/fournisseurs/'+b.dataset.id); if(r.error){toast('❌ '+r.error);return;} toast('🗑️ Supprimé'); refFournisseurs(); });
+  body.querySelectorAll('.f-d').forEach(b=>b.onclick=()=>confirmModal('Supprimer ce fournisseur ?', async ()=>{ const r=await api('DELETE','/cbd/fournisseurs/'+b.dataset.id); if(r.error){toast('❌ '+r.error);return;} toast('🗑️ Supprimé'); refFournisseurs(); }, true));
 }
 function formFournisseur(x){
   const f=[{key:'nom',label:'Nom'},{key:'contact',label:'Contact (tel / email, option)'},{key:'ordre',label:'Ordre',type:'number'}];
