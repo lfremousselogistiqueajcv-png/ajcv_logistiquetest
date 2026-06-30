@@ -2016,7 +2016,7 @@ async function renderDocs(){
       <p class="muted" style="margin:12px 0 14px">Tous les documents signés par les clients à la livraison. Cliquez pour voir et télécharger.</p>
       <div class="form-grid" style="margin-bottom:14px">
         <div><label>Date (vide = tous)</label><input type="date" id="doc-date" onchange="chargerDocs()"></div>
-        <div><label>Recherche</label><input id="doc-search" placeholder="Client ou signataire..." oninput="chargerDocs()"></div>
+        <div><label>Recherche</label><input id="doc-search" placeholder="Client, signataire ou N° BL…" oninput="filterDocs()"></div>
       </div>
       <span id="docs-top"></span><div id="docs-liste"></div>
     </div>`;
@@ -2024,14 +2024,18 @@ async function renderDocs(){
 }
 async function chargerDocs(){
   const date=document.getElementById('doc-date').value;
-  const search=document.getElementById('doc-search').value;
   const el=document.getElementById('docs-liste');
   el.innerHTML='<div class="loading"><div class="spin"></div></div>';
   let q='/admin/signatures?';
   if(date){const [y,m,d]=date.split('-');q+='date='+encodeURIComponent(d+'/'+m+'/'+y)+'&';}
-  if(search) q+='search='+encodeURIComponent(search);
   const r=await api('GET',q).catch(()=>({documents:[]}));
-  const docs=r.documents||[];
+  window._docsAll=r.documents||[];
+  filterDocs();
+}
+function filterDocs(){
+  const s=(document.getElementById('doc-search').value||'').toLowerCase().trim();
+  let docs=window._docsAll||[];
+  if(s) docs=docs.filter(d=>(d.client||'').toLowerCase().includes(s)||(d.signataire||'').toLowerCase().includes(s)||(d.bl||'').toLowerCase().includes(s));
   window._docs=docs; _pgData['docs']=docs; _pg['docs']=0;
   renderDocsTable();
 }
@@ -2041,9 +2045,10 @@ function renderDocsTable(){
   if(v.total===0){el.innerHTML='<div class="loading">Aucun document signé</div>';return;}
   el.innerHTML=`<div class="muted" style="margin-bottom:10px">${v.total} document(s)</div>
   <div class="table-wrap"><table>
-    <thead><tr><th>Date/Heure</th><th>Client</th><th>Signataire</th><th>Livreur</th><th>Colis</th><th>Zone</th><th></th></tr></thead>
+    <thead><tr><th>Date/Heure</th><th>N° BL</th><th>Client</th><th>Signataire</th><th>Livreur</th><th>Colis</th><th>Zone</th><th></th></tr></thead>
     <tbody>${v.rows.map((d,li)=>`<tr>
       <td class="muted" style="white-space:nowrap">${(d.date_heure||(d.created_at||'').replace('T',' ').slice(0,16))}</td>
+      <td><b>${esc(d.bl||'—')}</b></td>
       <td><b>${esc(d.client)}</b></td>
       <td>${esc(d.signataire||'—')}</td>
       <td>${esc(d.livreur||'—')}</td>
