@@ -84,7 +84,7 @@ input:focus,select:focus{border-color:var(--gold)}
     </div>
     <div class="err" id="loginErr"></div>
     <button class="btn btn-gold" onclick="connexion()">Se connecter</button>
-    <div style="text-align:center;margin-top:14px"><a href="reset.html" style="color:#FFB300;font-size:13px;text-decoration:none">Mot de passe oublié ?</a></div>
+    <div style="text-align:center;margin-top:14px"><a href="https://lfremousselogistiqueajcv-png.github.io/ajcv_logistique/reset.html" style="color:#FFB300;font-size:13px;text-decoration:none">Mot de passe oublié ?</a></div>
   </div>
 </div>
 <div id="app">
@@ -137,23 +137,7 @@ input:focus,select:focus{border-color:var(--gold)}
   </div>
 </div>
 <script>
-// ════════════════════════════════════════
-// ENVIRONNEMENT DE TEST — backend de test, données fictives.
-// ════════════════════════════════════════
-const API_BASE = 'https://ajcvbackend-test-production.up.railway.app';
-(function(){
-  var show = function(){
-    if (document.getElementById('ajcv-test-banner')) return;
-    var b = document.createElement('div');
-    b.id = 'ajcv-test-banner';
-    b.textContent = '🧪 ENVIRONNEMENT DE TEST · build 26/06-1 — données fictives, sans impact prod';
-    b.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;background:#7c3aed;color:#fff;font:600 13px/1.4 Arial,sans-serif;text-align:center;padding:6px 10px;display:block;box-shadow:0 2px 8px rgba(0,0,0,.3)';
-    document.body.appendChild(b); document.body.style.paddingTop='32px';
-  };
-  if (document.body) show(); else document.addEventListener('DOMContentLoaded', show);
-})();
-
-const API = API_BASE;
+const API = 'https://ajcvbackend-test-production.up.railway.app';
 const APP_VERSION = 'v3-clean-2026';
 let S = { token:'', login:'', prenom:'', role:'', zone:'', filtre:'tous', clients:[] };
 
@@ -475,6 +459,24 @@ window.addEventListener('DOMContentLoaded',()=>{
     if(sv&&sv.token){S.token=sv.token;S.login=sv.login;S.prenom=sv.prenom;S.role=sv.role;S.zone=sv.zone||'';demarrer();}
   }catch(_){}
 });
+</script>
+<script>/* Bannière TEST — retirer pour la version prod */
+(function(){ var b=document.createElement('div'); b.id='test-banner'; b.textContent='🧪 TEST'; b.style.cssText='position:fixed;top:6px;right:6px;z-index:2147483000;background:#f59e0b;color:#1a1a1a;font:700 11px -apple-system,BlinkMacSystemFont,sans-serif;padding:3px 8px;border-radius:6px;letter-spacing:.5px;box-shadow:0 2px 6px rgba(0,0,0,.2)'; function add(){ if(document.body&&!document.getElementById('test-banner')) document.body.appendChild(b); } if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',add); else add(); })();
+</script>
+<script>
+(function(){
+  function showMaint(msg){
+    if(document.getElementById('maint-screen'))return;
+    var d=document.createElement('div'); d.id='maint-screen';
+    d.style.cssText='position:fixed;inset:0;z-index:2147483600;background:#0F1724;color:#F0F4FF;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:28px;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif';
+    d.innerHTML='<div style="font-size:60px;margin-bottom:14px">🔧</div><div style="font-size:22px;font-weight:800;margin-bottom:10px">Application en maintenance</div><div style="font-size:15px;max-width:430px;line-height:1.55;color:#8B9EC7">'+(msg||'Une mise à jour est en cours. Merci de réessayer un peu plus tard.')+'</div><button id="maint-admin" style="margin-top:26px;background:transparent;color:#8B9EC7;border:1px solid rgba(255,255,255,.25);padding:9px 16px;border-radius:10px;font-size:13px;cursor:pointer">Accès administrateur</button>';
+    document.body.appendChild(d);
+    document.getElementById('maint-admin').onclick=function(){ d.remove(); };
+  }
+  window.__maintShow=showMaint;
+  function chk(){ try{ fetch((API)+'/maintenance/'+('commercial'),{cache:'no-store'}).then(function(r){return r.json();}).then(function(j){ if(j&&j.maintenance) showMaint(j.message); }).catch(function(){}); }catch(e){} }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',chk); else chk();
+})();
 </script>
 </body>
 </html>
