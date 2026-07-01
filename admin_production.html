@@ -474,7 +474,7 @@ function renderStock(){
   $('content').innerHTML=`
     <div class="card">
       <h3>📋 Stock journalier &amp; ventes
-        <span class="actions"><input type="date" id="st-date" class="fld" style="width:auto;padding:8px 10px" value="${_stockDate}"><button class="btn-ghost btn-sm" id="st-refresh">🔄</button>${resp?'<button class="btn btn-sm" id="st-saveall">💾 Tout enregistrer</button>':''}</span>
+        <span class="actions"><input type="date" id="st-date" class="fld" style="width:auto;padding:8px 10px" value="${_stockDate}"><button class="btn-ghost btn-sm" id="st-refresh">🔄</button>${resp?'<button class="btn btn-sm" id="st-saveall">💾 Tout enregistrer</button> <button class="btn-danger btn-sm" id="st-clearday">🗑️ Vider le jour</button>':''}</span>
       </h3>
       <div class="kpis" id="st-kpis"></div>
       <div id="st-body"><div class="loading">Chargement…</div></div>
@@ -483,6 +483,7 @@ function renderStock(){
   $('st-date').onchange=e=>{ _stockDate=e.target.value; chargerStock(); };
   $('st-refresh').onclick=chargerStock;
   if(resp&&$('st-saveall'))$('st-saveall').onclick=enregistrerToutStock;
+  if(resp&&$('st-clearday'))$('st-clearday').onclick=()=>confirmModal('Supprimer TOUTE la saisie de stock du '+_stockDate+' ? Action définitive.', async ()=>{ const r=await api('DELETE','/cbd/stock-jour?date_jour='+encodeURIComponent(_stockDate)); if(r.error){toast('❌ '+r.error);return;} toast('🗑️ Saisie du jour supprimée'); chargerStock(); }, true);
   chargerStock();
 }
 async function chargerStock(){
@@ -513,7 +514,7 @@ async function chargerStock(){
       <td>${prioBadge(l.priorite)}</td><td>${l.produit_auj||0}</td>
       <td>${l.ventes!=null?'<b>'+l.ventes+'</b>':'—'}</td>
       <td>${l.reste!=null?l.reste:'—'}</td>
-      <td><button class="btn btn-sm st-save">💾</button></td></tr>`;
+      <td><button class="btn btn-sm st-save">💾</button>${l.saisi?' <button class="btn-danger btn-sm st-del" title="Supprimer la saisie">🗑️</button>':''}</td></tr>`;
     return `<tr><td><b>${esc(l.code||'')}</b><br><span class="small muted">${esc(l.designation||'')}</span></td>
       <td>${esc(l.variete_nom||'—')}</td><td>${l.format_g!=null?l.format_g+' g':'—'}</td>
       <td>${l.stock_compte!=null?l.stock_compte:'—'}</td><td><b>${l.a_produire!=null?l.a_produire:'—'}</b></td>
@@ -526,6 +527,7 @@ async function chargerStock(){
     btn.disabled=false; btn.textContent='💾';
     if(r.error){ toast('❌ '+r.error); return; } toast('✅ Enregistré'); chargerStock();
   });
+  if(resp) body.querySelectorAll('.st-del').forEach(btn=>btn.onclick=()=>{ const tr=btn.closest('tr'), pid=tr.dataset.pid; confirmModal('Supprimer la saisie de stock de cette référence pour le '+_stockDate+' ?', async ()=>{ const r=await api('DELETE','/cbd/stock-jour?date_jour='+encodeURIComponent(_stockDate)+'&produit_id='+encodeURIComponent(pid)); if(r.error){toast('❌ '+r.error);return;} toast('🗑️ Supprimé'); chargerStock(); }, true); });
 }
 async function enregistrerToutStock(){
   const rows=document.querySelectorAll('#st-body tr[data-pid]'), todo=[];

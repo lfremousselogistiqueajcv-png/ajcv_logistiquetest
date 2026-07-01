@@ -289,18 +289,7 @@ body { font-family: Arial, sans-serif; background:#f0f2f5; color:#222; }
   }
 })();
 
-const API_BASE = 'https://ajcvbackend-test-production.up.railway.app';
-(function(){
-  var show=function(){
-    if(document.getElementById('ajcv-test-banner'))return;
-    var b=document.createElement('div'); b.id='ajcv-test-banner';
-    b.textContent='🧪 ENVIRONNEMENT DE TEST · build 26/06-14';
-    b.style.cssText='position:fixed;top:0;left:50%;transform:translateX(-50%);z-index:99999;background:#7c3aed;color:#fff;font:600 12px/1.3 Arial,sans-serif;text-align:center;padding:4px 14px;border-radius:0 0 8px 8px;box-shadow:0 2px 6px rgba(0,0,0,.3)';
-    document.body.appendChild(b);
-  };
-  if(document.body)show(); else document.addEventListener('DOMContentLoaded',show);
-})();
-const API_URL = API_BASE;
+const API_URL = 'https://ajcvbackend-test-production.up.railway.app';
 const MAP_TILES_KEY = 'AIzaSyANCuTbj18tPJ9ZzreJpRgsR9j-Ijt-26g';  // Clé Google Map Tiles (restreinte: sites AJCV + Map Tiles API)
 
 // ── SESSION ──────────────────────────────────────────────────
@@ -796,7 +785,7 @@ function afficherListeLivraisons() {
   container.innerHTML=html;
 }
 
-function dtCarte(v){ try{ const d=new Date(v); if(isNaN(d)) return ''; return d.toLocaleString('fr-FR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}); }catch(_){ return ''; } }
+function dtCarte(v){ try{ const d=new Date(v); if(isNaN(d)) return ''; return d.toLocaleString('fr-FR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit',timeZone:'Indian/Reunion'}); }catch(_){ return ''; } }
 function afficherDetail(l) {
   livraisonSelectionnee=l;
   const cfg=ZONES_CONFIG[l.zone]||{};

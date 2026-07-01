@@ -1,44 +1,34 @@
 {
-  "version": "2026.06.26.14",
+  "version": "2026.06.30.1",
   "app": "AJCV Logistique",
   "historique": [
     {
-      "v": "2026.06.26.14",
-      "date": "27/06/2026",
-      "titre": "Tableau de bord KPI complet + correction du filtre de dates (carte)",
+      "v": "2026.06.30.1",
+      "date": "30/06/2026",
+      "titre": "Mode maintenance, thème clair/sombre & module Production CBD",
       "notes": [
-        "Onglet KPI entièrement refait : sélecteur de période (aujourd'hui / 7j / 30j / ce mois / perso).",
-        "Nouveau suivi des préparations : nombre de BL préparés sur la période (à la date de prépa réelle), par jour et par préparateur.",
-        "Nouveaux totaux produits : colis, boissons, charbons, PLV, TPE.",
-        "Tableaux par jour (préparés + livraisons), par zone, par livreur, clients souvent non livrés.",
-        "Carte : le filtre par dates fonctionne désormais correctement (bug de fuseau horaire corrigé)."
+        "🌓 Thème clair / sombre : un bouton ☀️/🌙 en haut de chaque écran pour un meilleur confort de lecture (accessibilité). Ton choix est mémorisé d'une fois sur l'autre.",
+        "🔧 Admin : nouvel onglet Maintenance — mets une application en maintenance en un clic (avec un message). Les utilisateurs voient alors une page « Application en maintenance » ; les administrateurs gardent toujours l'accès.",
+        "🌿 Nouveau module Production CBD : console dédiée (production, ateliers, stock & ventes du jour, journal de production) avec une vue Préparateur simplifiée.",
+        "📄 Admin → Documents : colonne N° BL ajoutée et recherche par numéro de BLV.",
+        "📊 Admin → KPI : tableau de bord (livraisons, préparations, produits ; détail par jour, zone, livreur et préparateur).",
+        "Aucune donnée existante n'a été modifiée."
       ]
     },
     {
-      "v": "2026.06.26.13",
+      "v": "2026.06.27.2",
       "date": "27/06/2026",
-      "titre": "Admin : Charbons / PLV / TPE par référence dans les livraisons",
+      "titre": "Zones configurables + Charbons / PLV / TPE par référence",
       "notes": [
-        "Création et modification d'une livraison : Charbons, PLV et TPE se saisissent désormais par référence (CHARBON 1, CHARBON 2…), comme les Boissons.",
-        "Fini le champ « nombre » unique : on précise la quantité de chaque référence, en cohérence avec le préparateur et le livreur.",
-        "Les quantités existantes sont reprises automatiquement à l'ouverture de la fiche.",
-        "Cadeaux reste un simple compteur (pas de référence)."
+        "Onglet Zones : tu peux maintenant ajouter ou corriger un code postal toi-même (avec son secteur → zone), sans intervention technique.",
+        "Création et modification d'une livraison : Charbons, PLV et TPE se saisissent par référence (CHARBON 1, CHARBON 2…), comme les Boissons.",
+        "Cohérence totale entre admin, préparateur et livreur sur les produits typés.",
+        "Aucune donnée existante modifiée."
       ]
     },
     {
-      "v": "2026.06.26.12",
+      "v": "2026.06.27.1",
       "date": "27/06/2026",
-      "titre": "Zones : ajout/correction de codes postaux depuis l'admin",
-      "notes": [
-        "Nouvel encart dans l'onglet 📍 Zones : « Ajouter ou corriger un code postal ».",
-        "Tu saisis un CP (97XXX) et son secteur → la zone (livreur) est affectée automatiquement.",
-        "Tes ajouts portent le tag « perso » et se retirent d'un clic (retour au défaut).",
-        "Les 60+ codes postaux d'origine restent inchangés : la base ne fait qu'ajouter ou corriger."
-      ]
-    },
-    {
-      "v": "2026.06.26.11",
-      "date": "26/06/2026",
       "titre": "Produits typés, chargement camion confirmé & traçabilité",
       "notes": [
         "📦 Charbons, PLV et TPE se gèrent comme les boissons : par type/référence à la préparation, au chargement et à la livraison. Saisie par menu détaillé pour éviter les erreurs.",
