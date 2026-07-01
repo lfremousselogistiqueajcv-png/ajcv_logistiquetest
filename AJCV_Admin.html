@@ -99,11 +99,21 @@ tr:hover td{background:rgba(255,255,255,.02)}
 .addr-item{padding:10px 12px;cursor:pointer;font-size:13px;line-height:1.3;border-bottom:1px solid var(--border,#eee);color:var(--text,#222)}
 .addr-item:hover{background:var(--surface2,#f3f4f6)}
 .addr-item:last-child{border-bottom:none}
+/* MODE CLAIR (accessibilite haute lisibilite) */
+html[data-theme="light"]{
+  --bg:#EDF1F7; --surface:#FFFFFF; --surface2:#EBEFF5; --surface3:#DCE2EC;
+  --text:#0F172A; --text2:#475569; --text3:#64748B;
+  --border:rgba(15,23,42,0.14);
+}
+#theme-btn{position:fixed;bottom:20px;left:20px;z-index:10001;width:46px;height:46px;border-radius:50%;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:21px;box-shadow:0 4px 16px rgba(0,0,0,.3);display:flex;align-items:center;justify-content:center;cursor:pointer}
+#theme-btn:active{transform:scale(.94)}
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>try{var _t=localStorage.getItem('ajcv_theme')||((window.matchMedia&&matchMedia('(prefers-color-scheme: light)').matches)?'light':'dark');document.documentElement.setAttribute('data-theme',_t);}catch(e){}</script>
 </head>
 <body>
+<button id="theme-btn" title="Mode clair / sombre (accessibilite)" aria-label="Basculer le mode clair ou sombre">☀️</button>
 
 <!-- LOGIN -->
 <div id="login">
@@ -287,8 +297,6 @@ tr:hover td{background:rgba(255,255,255,.02)}
       <div style="grid-column:1/-1"><label>Email (pour le bon de réception)</label><input id="fl-email" type="email" placeholder="prérempli depuis la fiche client"></div>
       <div style="grid-column:1/-1"><label>Indications</label><input id="fl-indic" placeholder="Instructions de livraison..."></div>
       <div style="grid-column:1/-1"><label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:600;background:rgba(245,158,11,.10);border:1px solid rgba(245,158,11,.4);border-radius:8px;padding:9px"><input type="checkbox" id="fl-vendredi" style="width:18px;height:18px;accent-color:#f59e0b"> 🏁 Forcer la tournée du vendredi (sinon auto si reçu jeu. 17h → ven. 12h)</label></div>
-      <div style="grid-column:1/-1"><label>📄 Facture (PDF, envoyée au client à la signature)</label><input type="file" id="fl-facture" accept="application/pdf"></div>
-      <div style="grid-column:1/-1"><label>📄 Bon de livraison (PDF, envoyé au client à la signature)</label><input type="file" id="fl-bl-pdf" accept="application/pdf"></div>
     </div>
     <div class="err" id="livErr"></div>
     <div class="form-actions">
@@ -1221,7 +1229,7 @@ async function enregistrerEditLiv(){
 async function ouvrirAjoutLiv(){
   await getClients();
   if(!_boissons){ const d=await api('GET','/boissons').catch(()=>({boissons:[]})); _boissons=d.boissons||[]; }
-  ['fl-client','fl-ville','fl-cp','fl-adresse','fl-tel','fl-indic','fl-bl','fl-email','fl-facture','fl-bl-pdf'].forEach(id=>document.getElementById(id).value='');
+  ['fl-client','fl-ville','fl-cp','fl-adresse','fl-tel','fl-indic','fl-bl','fl-email'].forEach(id=>document.getElementById(id).value='');
   window._selClientId=null; window._selClientEmail=''; window._selClientTel=''; window._selClientAdresse=''; window._selClientVille=''; window._selClientCp='';
   document.getElementById('fl-colis').value=1;
   document.getElementById('fl-cadeaux').value=0;
@@ -1331,33 +1339,8 @@ async function creerLivraison(){
     }
   }
   const r=await api('POST','/livraisons',body).catch(()=>null);
-  if(r&&r.success){
-    const newId = r.data && r.data.id;
-    if(newId){
-      const nbDocs = (document.getElementById('fl-facture').files[0]?1:0)+(document.getElementById('fl-bl-pdf').files[0]?1:0);
-      if(nbDocs){ toast('⏳ Envoi du/des PDF...'); await uploadDocsLivraison(newId); }
-    }
-    fermerModal('modalLiv');toast('✅ Livraison ajoutée');chargerLivraisons();
-  }
+  if(r&&r.success){fermerModal('modalLiv');toast('✅ Livraison ajoutée');chargerLivraisons();}
   else {err.textContent='❌ '+((r&&r.message)||(r&&r.error)||'Erreur');err.style.display='block';}
-}
-
-// Upload facture/BL (PDF) rattachés à une livraison → bucket documents-vente
-function _fichierEnBase64(input){
-  return new Promise(res=>{
-    const f = input && input.files && input.files[0];
-    if(!f){ res(null); return; }
-    const rd = new FileReader();
-    rd.onload = ()=>res({ b64: rd.result, nom: f.name });
-    rd.onerror = ()=>res(null);
-    rd.readAsDataURL(f);
-  });
-}
-async function uploadDocsLivraison(id){
-  const fac = await _fichierEnBase64(document.getElementById('fl-facture'));
-  if(fac){ await api('POST','/livraisons/'+id+'/document',{type:'facture',pdfBase64:fac.b64,nom:fac.nom}).catch(()=>{}); }
-  const bl = await _fichierEnBase64(document.getElementById('fl-bl-pdf'));
-  if(bl){ await api('POST','/livraisons/'+id+'/document',{type:'bl',pdfBase64:bl.b64,nom:bl.nom}).catch(()=>{}); }
 }
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -2664,7 +2647,8 @@ document.addEventListener('visibilitychange', ()=>{ if(!document.hidden) verifie
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',chk); else chk();
 })();
 </script>
-<script>/* Banniere TEST */
+<script>(function(){function ap(t){document.documentElement.setAttribute('data-theme',t);var b=document.getElementById('theme-btn');if(b)b.textContent=(t==='light'?'🌙':'☀️');}function tg(){var c=document.documentElement.getAttribute('data-theme')==='light'?'light':'dark';var n=c==='light'?'dark':'light';try{localStorage.setItem('ajcv_theme',n);}catch(_){}ap(n);}ap(document.documentElement.getAttribute('data-theme')||'dark');var b=document.getElementById('theme-btn');if(b)b.onclick=tg;})();</script>
+<script>/* TEST */
 (function(){var b=document.createElement("div");b.id="test-banner";b.textContent="🧪 TEST";b.style.cssText="position:fixed;top:6px;right:6px;z-index:2147483000;background:#f59e0b;color:#1a1a1a;font:700 11px sans-serif;padding:3px 8px;border-radius:6px;box-shadow:0 2px 6px rgba(0,0,0,.2)";function add(){if(document.body&&!document.getElementById("test-banner"))document.body.appendChild(b);}if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",add);else add();})();
 </script>
 </body>
