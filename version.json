@@ -1,7 +1,17 @@
 {
-  "version": "2026.07.01.1",
+  "version": "2026.07.01.2",
   "app": "AJCV Logistique",
   "historique": [
+    {
+      "v": "2026.07.01.2",
+      "date": "01/07/2026",
+      "titre": "Visionneuse photos plein écran",
+      "notes": [
+        "📸 Les photos de préparation (et de chargement camion) s'ouvrent maintenant en plein écran, directement dans l'application, au lieu d'ouvrir un nouvel onglet.",
+        "◀ ▶ Navigation suivant / précédent entre les photos d'une même commande (flèches, glissement du doigt, ou touches ← →).",
+        "✕ Fermeture par la croix, par la touche Échap ou en cliquant à côté de la photo."
+      ]
+    },
     {
       "v": "2026.07.01.1",
       "date": "01/07/2026",
