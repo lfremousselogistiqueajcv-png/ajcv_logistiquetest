@@ -224,6 +224,33 @@ tr:hover td{background:rgba(255,255,255,.02)}
       <div><label>Téléphone 1</label><input id="cli-tel1"></div>
       <div><label>Téléphone 2</label><input id="cli-tel2"></div>
       <div style="grid-column:1/-1"><label>Email</label><input id="cli-email" type="email"></div>
+      <div style="grid-column:1/-1"><label>🕐 Horaires d'ouverture</label><input id="cli-horaires" placeholder="Ex: 8h-12h / 14h-18h"></div>
+      <div style="grid-column:1/-1"><label>⚠️ Contrainte de livraison</label><select id="cli-contrainte">
+        <option value="LIBRE">LIBRE — aucune contrainte</option>
+        <optgroup label="⏰ Créneaux horaires">
+          <option value="MATIN">MATIN (avant 12h)</option>
+          <option value="APRES-MIDI">APRÈS-MIDI (après 14h)</option>
+          <option value="AVANT 9H">Avant 9h</option>
+          <option value="AVANT 10H">Avant 10h</option>
+          <option value="AVANT 11H">Avant 11h</option>
+          <option value="APRES 14H">Après 14h</option>
+          <option value="APRES 15H">Après 15h</option>
+          <option value="PAS LE MIDI">Pas entre 12h et 14h</option>
+        </optgroup>
+        <optgroup label="🚛 Accès &amp; matériel">
+          <option value="SUR RDV">Sur rendez-vous</option>
+          <option value="LIVRAISON ARRIERE">Livraison par l'arrière</option>
+          <option value="HAYON">Hayon obligatoire</option>
+          <option value="TRANSPALETTE">Transpalette nécessaire</option>
+          <option value="ACCES DIFFICILE">Accès camion difficile</option>
+          <option value="PETIT VEHICULE">Petit véhicule uniquement</option>
+        </optgroup>
+      </select></div>
+      <div style="grid-column:1/-1"><label>🚨 Priorité</label><select id="cli-priorite">
+        <option value="NORMALE">NORMALE</option>
+        <option value="PRIORITAIRE">PRIORITAIRE</option>
+        <option value="FLEXIBLE">FLEXIBLE</option>
+      </select></div>
     </div>
     <div style="font-size:12px;color:var(--text3);margin-top:8px">💡 Le GPS est calculé automatiquement depuis l'adresse à la création.</div>
     <div class="err" id="cliErr"></div>
@@ -260,6 +287,8 @@ tr:hover td{background:rgba(255,255,255,.02)}
       <div style="grid-column:1/-1"><label>Email (pour le bon de réception)</label><input id="fl-email" type="email" placeholder="prérempli depuis la fiche client"></div>
       <div style="grid-column:1/-1"><label>Indications</label><input id="fl-indic" placeholder="Instructions de livraison..."></div>
       <div style="grid-column:1/-1"><label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:600;background:rgba(245,158,11,.10);border:1px solid rgba(245,158,11,.4);border-radius:8px;padding:9px"><input type="checkbox" id="fl-vendredi" style="width:18px;height:18px;accent-color:#f59e0b"> 🏁 Forcer la tournée du vendredi (sinon auto si reçu jeu. 17h → ven. 12h)</label></div>
+      <div style="grid-column:1/-1"><label>📄 Facture (PDF, envoyée au client à la signature)</label><input type="file" id="fl-facture" accept="application/pdf"></div>
+      <div style="grid-column:1/-1"><label>📄 Bon de livraison (PDF, envoyé au client à la signature)</label><input type="file" id="fl-bl-pdf" accept="application/pdf"></div>
     </div>
     <div class="err" id="livErr"></div>
     <div class="form-actions">
@@ -1192,7 +1221,7 @@ async function enregistrerEditLiv(){
 async function ouvrirAjoutLiv(){
   await getClients();
   if(!_boissons){ const d=await api('GET','/boissons').catch(()=>({boissons:[]})); _boissons=d.boissons||[]; }
-  ['fl-client','fl-ville','fl-cp','fl-adresse','fl-tel','fl-indic','fl-bl','fl-email'].forEach(id=>document.getElementById(id).value='');
+  ['fl-client','fl-ville','fl-cp','fl-adresse','fl-tel','fl-indic','fl-bl','fl-email','fl-facture','fl-bl-pdf'].forEach(id=>document.getElementById(id).value='');
   window._selClientId=null; window._selClientEmail=''; window._selClientTel=''; window._selClientAdresse=''; window._selClientVille=''; window._selClientCp='';
   document.getElementById('fl-colis').value=1;
   document.getElementById('fl-cadeaux').value=0;
@@ -1302,8 +1331,33 @@ async function creerLivraison(){
     }
   }
   const r=await api('POST','/livraisons',body).catch(()=>null);
-  if(r&&r.success){fermerModal('modalLiv');toast('✅ Livraison ajoutée');chargerLivraisons();}
+  if(r&&r.success){
+    const newId = r.data && r.data.id;
+    if(newId){
+      const nbDocs = (document.getElementById('fl-facture').files[0]?1:0)+(document.getElementById('fl-bl-pdf').files[0]?1:0);
+      if(nbDocs){ toast('⏳ Envoi du/des PDF...'); await uploadDocsLivraison(newId); }
+    }
+    fermerModal('modalLiv');toast('✅ Livraison ajoutée');chargerLivraisons();
+  }
   else {err.textContent='❌ '+((r&&r.message)||(r&&r.error)||'Erreur');err.style.display='block';}
+}
+
+// Upload facture/BL (PDF) rattachés à une livraison → bucket documents-vente
+function _fichierEnBase64(input){
+  return new Promise(res=>{
+    const f = input && input.files && input.files[0];
+    if(!f){ res(null); return; }
+    const rd = new FileReader();
+    rd.onload = ()=>res({ b64: rd.result, nom: f.name });
+    rd.onerror = ()=>res(null);
+    rd.readAsDataURL(f);
+  });
+}
+async function uploadDocsLivraison(id){
+  const fac = await _fichierEnBase64(document.getElementById('fl-facture'));
+  if(fac){ await api('POST','/livraisons/'+id+'/document',{type:'facture',pdfBase64:fac.b64,nom:fac.nom}).catch(()=>{}); }
+  const bl = await _fichierEnBase64(document.getElementById('fl-bl-pdf'));
+  if(bl){ await api('POST','/livraisons/'+id+'/document',{type:'bl',pdfBase64:bl.b64,nom:bl.nom}).catch(()=>{}); }
 }
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -1727,7 +1781,9 @@ function ajouterClient(){
   _editClientId=null;
   document.getElementById('cli-titre').textContent='➕ Ajouter un client';
   document.getElementById('cli-ok').textContent='✅ Créer le client';
-  ['cli-nom','cli-ville','cli-cp','cli-adresse','cli-tel1','cli-tel2','cli-email'].forEach(id=>document.getElementById(id).value='');
+  ['cli-nom','cli-ville','cli-cp','cli-adresse','cli-tel1','cli-tel2','cli-email','cli-horaires'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('cli-contrainte').value='LIBRE';
+  document.getElementById('cli-priorite').value='NORMALE';
   document.getElementById('cliErr').textContent='';
   _cliGeo = null;
   const box=document.getElementById('cli-sug'); if(box){ box.style.display='none'; box.innerHTML=''; }
@@ -1747,6 +1803,9 @@ async function ouvrirEditClient(id){
   document.getElementById('cli-tel1').value=c.tel1||'';
   document.getElementById('cli-tel2').value=c.tel2||'';
   document.getElementById('cli-email').value=c.email||'';
+  document.getElementById('cli-horaires').value=c.horaires||'';
+  document.getElementById('cli-contrainte').value=c.contrainte||'LIBRE';
+  document.getElementById('cli-priorite').value=c.priorite||'NORMALE';
   document.getElementById('cliErr').textContent='';
   _cliGeo=null;
   const box=document.getElementById('cli-sug'); if(box){ box.style.display='none'; box.innerHTML=''; }
@@ -1765,7 +1824,10 @@ async function sauverEditClient(){
     adresse:document.getElementById('cli-adresse').value.trim(),
     tel1:document.getElementById('cli-tel1').value.trim(),
     tel2:document.getElementById('cli-tel2').value.trim(),
-    email:document.getElementById('cli-email').value.trim()
+    email:document.getElementById('cli-email').value.trim(),
+    horaires:document.getElementById('cli-horaires').value.trim(),
+    contrainte:document.getElementById('cli-contrainte').value,
+    priorite:document.getElementById('cli-priorite').value
   };
   const btn=document.getElementById('cli-ok'); if(btn){ btn.disabled=true; btn.textContent='⏳…'; }
   toast('⏳ Enregistrement + géocodage...');
@@ -1793,7 +1855,7 @@ async function creerClient(){
     tel1:document.getElementById('cli-tel1').value.trim(),
     tel2:document.getElementById('cli-tel2').value.trim(),
     email:document.getElementById('cli-email').value.trim(),
-    contrainte:'LIBRE', priorite:'NORMALE', actif:true,
+    horaires:document.getElementById('cli-horaires').value.trim(), contrainte:document.getElementById('cli-contrainte').value, priorite:document.getElementById('cli-priorite').value, actif:true,
     ...(_cliGeo ? { lat:_cliGeo.lat, lng:_cliGeo.lng } : {})
   };
   toast('⏳ Création + géocodage...');
@@ -2602,8 +2664,8 @@ document.addEventListener('visibilitychange', ()=>{ if(!document.hidden) verifie
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',chk); else chk();
 })();
 </script>
-<script>/* Banniere TEST - retirer pour la version prod */
-(function(){ var b=document.createElement("div"); b.id="test-banner"; b.textContent="🧪 TEST"; b.style.cssText="position:fixed;top:6px;right:6px;z-index:2147483000;background:#f59e0b;color:#1a1a1a;font:700 11px -apple-system,BlinkMacSystemFont,sans-serif;padding:3px 8px;border-radius:6px;letter-spacing:.5px;box-shadow:0 2px 6px rgba(0,0,0,.2)"; function add(){ if(document.body&&!document.getElementById("test-banner")) document.body.appendChild(b); } if(document.readyState==="loading") document.addEventListener("DOMContentLoaded",add); else add(); })();
+<script>/* Banniere TEST */
+(function(){var b=document.createElement("div");b.id="test-banner";b.textContent="🧪 TEST";b.style.cssText="position:fixed;top:6px;right:6px;z-index:2147483000;background:#f59e0b;color:#1a1a1a;font:700 11px sans-serif;padding:3px 8px;border-radius:6px;box-shadow:0 2px 6px rgba(0,0,0,.2)";function add(){if(document.body&&!document.getElementById("test-banner"))document.body.appendChild(b);}if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",add);else add();})();
 </script>
 </body>
 </html>
