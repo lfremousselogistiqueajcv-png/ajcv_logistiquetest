@@ -765,6 +765,7 @@ function formProduit(x){
     {key:'designation',label:'Désignation',placeholder:'ex. Pochon OG Kush 5 g'},
     {key:'variete_id',label:'Variété',type:'select',options:vo},
     {key:'format_g',label:'Format (g par pochon)',type:'number',step:'0.01',min:0},
+    {key:'nb_par_lot',label:'Nb pochons / lot (atelier 3 — laisser vide si pas de mise en lot)',type:'number',min:1,step:1},
     {key:'stock_mini',label:'Stock mini (seuil urgent)',type:'number'},
     {key:'stock_cible',label:'Stock cible',type:'number'},
   ];
@@ -772,12 +773,12 @@ function formProduit(x){
   f.push({key:'ordre',label:'Ordre d\'affichage',type:'number'});
   if(x)f.push({key:'actif',label:'Actif',type:'checkbox',def:true});
   openForm(x?'Modifier le produit':'Nouveau produit', f,
-    x?{code:x.code,designation:x.designation,variete_id:x.variete_id,format_g:x.format_g,stock_mini:x.stock_mini,stock_cible:x.stock_cible,prix_vente:x.prix_vente,ordre:x.ordre,actif:x.actif}:{stock_mini:0,stock_cible:0,ordre:0},
+    x?{code:x.code,designation:x.designation,variete_id:x.variete_id,format_g:x.format_g,stock_mini:x.stock_mini,stock_cible:x.stock_cible,prix_vente:x.prix_vente,ordre:x.ordre,actif:x.actif,nb_par_lot:x.nb_par_lot}:{stock_mini:0,stock_cible:0,ordre:0},
     async (v,close,fail)=>{
       if(!v.code||!v.code.trim())return fail('Code requis');
       if(!v.designation||!v.designation.trim())return fail('Désignation requise');
       if(!v.format_g||num(v.format_g)<=0)return fail('Format (g) invalide');
-      const body={code:v.code.trim(),designation:v.designation.trim(),variete_id:v.variete_id||null,format_g:num(v.format_g),stock_mini:num(v.stock_mini,0),stock_cible:num(v.stock_cible,0),prix_vente:(v.prix_vente===''||v.prix_vente==null)?null:num(v.prix_vente),ordre:num(v.ordre,0)};
+      const body={code:v.code.trim(),designation:v.designation.trim(),variete_id:v.variete_id||null,format_g:num(v.format_g),stock_mini:num(v.stock_mini,0),stock_cible:num(v.stock_cible,0),prix_vente:(v.prix_vente===''||v.prix_vente==null)?null:num(v.prix_vente),ordre:num(v.ordre,0),nb_par_lot:(v.nb_par_lot===''||v.nb_par_lot==null)?null:num(v.nb_par_lot)};
       if(x&&v.actif!==undefined)body.actif=!!v.actif;
       const res=x?await api('PATCH','/cbd/produits/'+x.id,body):await api('POST','/cbd/produits',body);
       if(res.error)return fail(res.error); close(); toast(x?'✅ Produit modifié':'✅ Produit créé'); refProduits();
