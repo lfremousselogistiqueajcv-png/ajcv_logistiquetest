@@ -513,7 +513,7 @@ async function renderChargements(){
     const _encC=encodeURIComponent(JSON.stringify(photos));const ph=photos.map((u,i)=>`<img src="${esc(String(u))}" onclick="lbP('${_encC}',${i})" style="width:88px;height:88px;object-fit:cover;border-radius:8px;border:1px solid var(--border);cursor:pointer">`).join('');
     return `<div class="card">
       <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
-        <div style="font-size:16px"><b>🚚 ${esc(c.livreur||'—')}</b> <span class="muted">${dCharge}${h?' · '+h:''}</span></div>
+        <div style="font-size:16px"><b>🚚 ${esc(c.livreur||'—')}</b>${c.plaque?` <span style="font-family:monospace;font-weight:700;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:1px 7px;font-size:14px">${esc(c.plaque)}</span>`:''} <span class="muted">${dCharge}${h?' · '+h:''}</span></div>
         <button class="btn btn-red btn-sm" onclick="resetCamion('${esc(String(c.id))}')">♻️ Permettre de recommencer</button>
       </div>
       <div style="margin-top:10px;font-weight:700;font-size:15px">🥤 ${c.nb_boissons||0} &nbsp; 🔥 ${c.nb_charbons||0} &nbsp; 🪧 ${c.nb_plv||0} &nbsp; 💳 ${c.nb_tpe||0}</div>
