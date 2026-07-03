@@ -517,6 +517,7 @@ async function renderChargements(){
         <button class="btn btn-red btn-sm" onclick="resetCamion('${esc(String(c.id))}')">♻️ Permettre de recommencer</button>
       </div>
       <div style="margin-top:10px;font-weight:700;font-size:15px">🥤 ${c.nb_boissons||0} &nbsp; 🔥 ${c.nb_charbons||0} &nbsp; 🪧 ${c.nb_plv||0} &nbsp; 💳 ${c.nb_tpe||0}</div>
+      ${(c.clients&&c.clients.length)?`<div style="margin-top:12px"><div style="font-weight:600;font-size:13px;color:var(--text2)">📋 ${c.clients.length} client${c.clients.length>1?'s':''}</div><div style="font-size:13px;margin-top:5px;line-height:1.8">${c.clients.map(cl=>`${esc(cl.client||'—')}${cl.ville?` <span class="muted">· ${esc(cl.ville)}</span>`:''}`).join(' &nbsp;•&nbsp; ')}</div></div>`:''}
       ${ph?`<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:12px">${ph}</div>`:'<p class="muted" style="margin-top:10px">Aucune photo.</p>'}
     </div>`;
   }).join('');
