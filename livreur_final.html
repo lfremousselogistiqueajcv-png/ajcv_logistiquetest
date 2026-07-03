@@ -542,7 +542,7 @@ html[data-theme="light"]{
 // CONFIG — À modifier
 // ════════════════════════════════════════
 const CFG = {
-  API_URL:  'https://ajcvbackend-test-production.up.railway.app',
+  API_URL:  'https://ajcvbackend-production.up.railway.app',
   MAP_TILES_KEY: 'AIzaSyANCuTbj18tPJ9ZzreJpRgsR9j-Ijt-26g',  // Clé Google Map Tiles (restreinte: sites AJCV + Map Tiles API)
   DEPOT:    { lat: -21.372694, lng: 55.602137 },
   // Serveur OSRM (moteur d'itinéraire). Par défaut = serveur de démo public.
@@ -1556,6 +1556,7 @@ async function validerTopCamion(){
     nb_tpe: parseInt(document.getElementById('tc-tpe').value)||0,
     photos: _camionPhotos,
     date: getDateISO(),
+    plaque: (state.plaque || ''),
   };
   try {
     const resp = await fetch(`${CFG.API_URL}/chargement/camion`, { method:'POST', headers:{'Content-Type':'application/json','Authorization':`Bearer ${state.token||''}`}, body: JSON.stringify(body) });
@@ -3093,7 +3094,6 @@ if ('serviceWorker' in navigator) {
     <div id="nouveautesCorps"></div>
   </div>
 </div>
-<script>document.addEventListener('DOMContentLoaded',function(){var b=document.createElement('div');b.id='test-banner';b.textContent='🧪 ENVIRONNEMENT DE TEST — données fictives, sans impact prod';document.body.appendChild(b);document.body.style.paddingTop='32px';});</script>
 <script>
 (function(){function ap(t){document.documentElement.setAttribute('data-theme',t);var b=document.getElementById('theme-btn');if(b)b.textContent=(t==='light'?'🌙':'☀️');}
 function tg(){var c=document.documentElement.getAttribute('data-theme')==='light'?'light':'dark';var n=c==='light'?'dark':'light';try{localStorage.setItem('ajcv_theme',n);}catch(_){}ap(n);}
