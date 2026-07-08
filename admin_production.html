@@ -678,11 +678,12 @@ function formReception(r){
     {key:'lot_fournisseur',label:'Lot fournisseur (option)'},
     {key:'certif_fournisseur',label:'Certificat / COA (option)'},
     {key:'quantite_kg',label:'Quantité reçue (kg)',type:'number',step:'0.001'},
-  ], r?{date_reception:r.date_reception,lot_vrac:r.lot_vrac,fournisseur_id:r.fournisseur_id,variete_id:r.variete_id,lot_fournisseur:r.lot_fournisseur,certif_fournisseur:r.certif_fournisseur,quantite_kg:r.quantite_kg}:{date_reception:todayISO()},
+    {key:'prix_achat_kg',label:'Prix d\'achat ('+devise()+'/kg, option)',type:'number',step:'0.01'},
+  ], r?{date_reception:r.date_reception,lot_vrac:r.lot_vrac,fournisseur_id:r.fournisseur_id,variete_id:r.variete_id,lot_fournisseur:r.lot_fournisseur,certif_fournisseur:r.certif_fournisseur,quantite_kg:r.quantite_kg,prix_achat_kg:r.prix_achat_kg}:{date_reception:todayISO()},
   async (v,close,fail)=>{
     if(!v.lot_vrac||!v.lot_vrac.trim())return fail('N° lot vrac requis');
     if(!v.quantite_kg||num(v.quantite_kg)<=0)return fail('Quantité (kg) invalide');
-    const body={date_reception:v.date_reception||todayISO(),fournisseur_id:v.fournisseur_id||null,variete_id:v.variete_id||null,lot_vrac:v.lot_vrac.trim(),lot_fournisseur:v.lot_fournisseur||null,certif_fournisseur:v.certif_fournisseur||null,quantite_kg:num(v.quantite_kg)};
+    const body={date_reception:v.date_reception||todayISO(),fournisseur_id:v.fournisseur_id||null,variete_id:v.variete_id||null,lot_vrac:v.lot_vrac.trim(),lot_fournisseur:v.lot_fournisseur||null,certif_fournisseur:v.certif_fournisseur||null,quantite_kg:num(v.quantite_kg),prix_achat_kg:(v.prix_achat_kg===''||v.prix_achat_kg==null)?null:num(v.prix_achat_kg)};
     const res=r?await api('PATCH','/cbd/receptions/'+r.id,body):await api('POST','/cbd/receptions',body);
     if(res.error)return fail(res.error); close(); toast(r?'✅ Réception modifiée':'✅ Réception ajoutée'); chargerReceptions();
   });
@@ -765,20 +766,20 @@ function formProduit(x){
     {key:'designation',label:'Désignation',placeholder:'ex. Pochon OG Kush 5 g'},
     {key:'variete_id',label:'Variété',type:'select',options:vo},
     {key:'format_g',label:'Format (g par pochon)',type:'number',step:'0.01',min:0},
-    {key:'nb_par_lot',label:'Nb pochons / lot (atelier 3 — laisser vide si pas de mise en lot)',type:'number',min:1,step:1},
     {key:'stock_mini',label:'Stock mini (seuil urgent)',type:'number'},
     {key:'stock_cible',label:'Stock cible',type:'number'},
   ];
   if(cfgPrix())f.push({key:'prix_vente',label:'Prix de vente ('+devise()+', option)',type:'number',step:'0.01'});
+  f.push({key:'cout_emballage',label:'Coût pochon neuf ('+devise()+', vide = défaut config)',type:'number',step:'0.001'});
   f.push({key:'ordre',label:'Ordre d\'affichage',type:'number'});
   if(x)f.push({key:'actif',label:'Actif',type:'checkbox',def:true});
   openForm(x?'Modifier le produit':'Nouveau produit', f,
-    x?{code:x.code,designation:x.designation,variete_id:x.variete_id,format_g:x.format_g,stock_mini:x.stock_mini,stock_cible:x.stock_cible,prix_vente:x.prix_vente,ordre:x.ordre,actif:x.actif,nb_par_lot:x.nb_par_lot}:{stock_mini:0,stock_cible:0,ordre:0},
+    x?{code:x.code,designation:x.designation,variete_id:x.variete_id,format_g:x.format_g,stock_mini:x.stock_mini,stock_cible:x.stock_cible,prix_vente:x.prix_vente,cout_emballage:x.cout_emballage,ordre:x.ordre,actif:x.actif}:{stock_mini:0,stock_cible:0,ordre:0},
     async (v,close,fail)=>{
       if(!v.code||!v.code.trim())return fail('Code requis');
       if(!v.designation||!v.designation.trim())return fail('Désignation requise');
       if(!v.format_g||num(v.format_g)<=0)return fail('Format (g) invalide');
-      const body={code:v.code.trim(),designation:v.designation.trim(),variete_id:v.variete_id||null,format_g:num(v.format_g),stock_mini:num(v.stock_mini,0),stock_cible:num(v.stock_cible,0),prix_vente:(v.prix_vente===''||v.prix_vente==null)?null:num(v.prix_vente),ordre:num(v.ordre,0),nb_par_lot:(v.nb_par_lot===''||v.nb_par_lot==null)?null:num(v.nb_par_lot)};
+      const body={code:v.code.trim(),designation:v.designation.trim(),variete_id:v.variete_id||null,format_g:num(v.format_g),stock_mini:num(v.stock_mini,0),stock_cible:num(v.stock_cible,0),prix_vente:(v.prix_vente===''||v.prix_vente==null)?null:num(v.prix_vente),cout_emballage:(v.cout_emballage===''||v.cout_emballage==null)?null:num(v.cout_emballage),ordre:num(v.ordre,0)};
       if(x&&v.actif!==undefined)body.actif=!!v.actif;
       const res=x?await api('PATCH','/cbd/produits/'+x.id,body):await api('POST','/cbd/produits',body);
       if(res.error)return fail(res.error); close(); toast(x?'✅ Produit modifié':'✅ Produit créé'); refProduits();
@@ -873,12 +874,14 @@ async function chargerPreparateurs(){
   const d=await api('GET','/cbd/users-activables');
   if(d.error){ body.innerHTML='<div class="empty">❌ '+esc(d.error)+'</div>'; return; }
   const U=d.users||[]; if(!U.length){ body.innerHTML='<div class="empty">Aucun compte actif.</div>'; return; }
-  body.innerHTML=`<div class="table-wrap"><table><thead><tr><th>Compte</th><th>Rôle</th><th>Accès Production</th></tr></thead><tbody>
+  body.innerHTML=`<div class="table-wrap"><table><thead><tr><th>Compte</th><th>Rôle</th><th>Accès Production</th><th>Taux horaire (${devise()}/h)</th></tr></thead><tbody>
     ${U.map(u=>{ const doffice=['Admin','Depot'].includes(u.role);
       return `<tr><td><b>${esc(u.nom||u.login)}</b><br><span class="small muted">${esc(u.login)}</span></td><td><span class="tag">${esc(u.role||'—')}</span></td>
-      <td>${doffice?'<span class="badge b-info">d\'office</span>':`<label class="toggle"><input type="checkbox" class="pr-t" data-login="${esc(u.login)}" ${u.peut_preparer_cbd?'checked':''}><span class="sw"></span></label>`}</td></tr>`; }).join('')}
+      <td>${doffice?'<span class="badge b-info">d\'office</span>':`<label class="toggle"><input type="checkbox" class="pr-t" data-login="${esc(u.login)}" ${u.peut_preparer_cbd?'checked':''}><span class="sw"></span></label>`}</td>
+      <td><input type="number" step="0.01" min="0" class="fld pr-th" style="max-width:110px" data-login="${esc(u.login)}" value="${u.taux_horaire!=null?u.taux_horaire:''}" placeholder="défaut"></td></tr>`; }).join('')}
   </tbody></table></div>`;
   body.querySelectorAll('.pr-t').forEach(t=>t.onchange=async ()=>{ const r=await api('PATCH','/cbd/preparateurs/'+encodeURIComponent(t.dataset.login),{peut_preparer_cbd:t.checked}); if(r.error){ toast('❌ '+r.error); t.checked=!t.checked; return; } toast(t.checked?'✅ Accès activé':'Accès retiré'); });
+  body.querySelectorAll('.pr-th').forEach(t=>t.onchange=async ()=>{ const r=await api('PATCH','/cbd/preparateurs/'+encodeURIComponent(t.dataset.login),{taux_horaire:t.value}); if(r.error){ toast('❌ '+r.error); return; } toast('✅ Taux horaire enregistré'); });
 }
 
 // ════════════════════════════════════════════════════════════
@@ -896,6 +899,12 @@ async function renderConfig(){
       <div class="col"><label>Unité de poids</label><input id="cf-up" class="fld" value="${esc(c.unite_poids||'kg')}" placeholder="kg"></div>
     </div>
     <label class="chk"><input type="checkbox" id="cf-prix" ${c.prix_visible?'checked':''}> Afficher les prix de vente</label>
+    <h3 style="margin-top:18px;font-size:13px">Rentabilité — valeurs par défaut</h3>
+    <div class="row">
+      <div class="col"><label>Coût pochon neuf (${esc(c.devise||'EUR')})</label><input id="cf-ppd" class="fld" type="number" step="0.001" min="0" value="${c.prix_pochon_defaut!=null?c.prix_pochon_defaut:0}"></div>
+      <div class="col"><label>Taux horaire (${esc(c.devise||'EUR')}/h)</label><input id="cf-thd" class="fld" type="number" step="0.01" min="0" value="${c.taux_horaire_defaut!=null?c.taux_horaire_defaut:0}"></div>
+    </div>
+    <div class="hint">Utilisées quand un produit n'a pas de coût pochon propre, ou un préparateur pas de taux individuel.</div>
     <h3 style="margin-top:18px;font-size:13px">Libellés de priorité</h3>
     <div class="row">
       <div class="col"><label>Urgent</label><input id="cf-lu" class="fld" value="${esc(lab.urgent||'🔴 Urgent')}"></div>
@@ -906,6 +915,7 @@ async function renderConfig(){
     <div class="err" id="cf-err"></div></div>`;
   $('cf-save').onclick=async ()=>{
     const body2={ module_nom:$('cf-nom').value.trim()||null, devise:$('cf-dev').value.trim()||'EUR', unite_poids:$('cf-up').value.trim()||'kg', prix_visible:$('cf-prix').checked,
+      prix_pochon_defaut:$('cf-ppd').value, taux_horaire_defaut:$('cf-thd').value,
       priorite_labels:{ urgent:$('cf-lu').value.trim(), a_produire:$('cf-la').value.trim(), ok:$('cf-lo').value.trim() } };
     const b=$('cf-save'); b.textContent='…'; b.disabled=true; $('cf-err').textContent='';
     const r=await api('PUT','/cbd/config',body2);
