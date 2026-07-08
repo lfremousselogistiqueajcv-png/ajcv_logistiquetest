@@ -858,6 +858,15 @@ async function chargerPerf(){
       ${P.map(p=>`<tr><td><b>${esc(p.nom||p.preparateur)}</b></td><td><b>${p.pochons_jour}</b></td><td>${p.nb_productions}</td><td>${p.temps_min?p.temps_min+' min':'—'}</td><td>${p.cadence!=null?p.cadence+' /h':'—'}</td><td>${p.pochons_total}</td></tr>`).join('')}
     </tbody></table></div>
     <div style="margin-top:14px">${bars(P,p=>p.nom||p.preparateur,p=>p.pochons_jour,'g')}</div>`;
+  const R=d.rentabilite||[];
+  if(R.length){
+    const tot=R.reduce((s,r)=>({ca:s.ca+(r.ca||0),m:s.m+(r.marge||0)}),{ca:0,m:0});
+    body.innerHTML+=`<h3 style="margin-top:18px">💰 Rentabilité du jour <span class="small muted">CA ${tot.ca.toFixed(2)} ${devise()} · marge ${tot.m.toFixed(2)} ${devise()}</span></h3>
+    <div class="table-wrap"><table><thead><tr><th>Réf.</th><th>Pochons</th><th>CA</th><th>Matière</th><th>Pochons neufs</th><th>Main-d'œuvre</th><th>Marge</th><th>Marge/pochon</th></tr></thead><tbody>
+      ${R.map(r=>`<tr><td><b>${esc(r.code||'')}</b> <span class="small muted">${esc(r.designation||'')}</span></td><td>${r.pochons}</td><td>${(r.ca!=null?r.ca:0).toFixed(2)}</td><td>${(r.cout_matiere!=null?r.cout_matiere:0).toFixed(2)}</td><td>${(r.cout_emballage!=null?r.cout_emballage:0).toFixed(2)}</td><td>${(r.cout_mo!=null?r.cout_mo:0).toFixed(2)}</td><td><b>${(r.marge!=null?r.marge:0).toFixed(2)}</b></td><td>${r.marge_unitaire!=null?r.marge_unitaire.toFixed(2):'—'}</td></tr>`).join('')}
+    </tbody></table></div>
+    <div class="hint">Matière au prix d'achat du lot réellement consommé · pochon neuf : coût du produit ou défaut config · main-d'œuvre : taux du préparateur ou défaut config. Renseigne le prix d'achat sur les réceptions pour une matière complète.</div>`;
+  }
 }
 
 // ════════════════════════════════════════════════════════════
