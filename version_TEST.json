@@ -1,7 +1,20 @@
 {
-  "version": "2026.07.04.4",
+  "version": "2026.07.04.5",
   "app": "AJCV Logistique",
   "historique": [
+    {
+      "v": "2026.07.04.5",
+      "date": "04/07/2026",
+      "titre": "[TEST] Production CBD : gestion des contenants (pochons vides)",
+      "notes": [
+        "🛍️ Nouvel onglet Contenants : référentiel des pochons vides (référence, prix, stock mini), stock courant calculé et alerte réassort.",
+        "🧾 Achats de contenants : réceptions avec quantité, prix du lot et fournisseur.",
+        "⚙️ Consommation automatique du stock par l'atelier de perçage (paramétrable par atelier).",
+        "🔗 Chaque produit peut être lié à son contenant (Référentiel).",
+        "💰 Coût pochon dans la marge : coût du produit → prix du contenant lié → défaut config.",
+        "⚠️ SQL : cbd_contenants.sql (Supabase test)."
+      ]
+    },
     {
       "v": "2026.07.04.4",
       "date": "04/07/2026",

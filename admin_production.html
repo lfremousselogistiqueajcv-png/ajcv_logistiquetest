@@ -292,6 +292,7 @@ function demarrer(){
       {id:'stock',label:'📋 Stock du jour',render:renderStock},
       {id:'saisie',label:'➕ Saisie',render:renderSaisie},
       {id:'receptions',label:'📦 Réceptions',render:renderReceptions},
+      {id:'contenants',label:'🛍️ Contenants',render:renderContenants},
       {id:'ateliers',label:'🏭 Ateliers',render:renderAteliers},
       {id:'ref',label:'🗂️ Référentiel',render:renderReferentiel},
       {id:'perf',label:'📈 Performance',render:renderPerformance},
@@ -689,6 +690,95 @@ function formReception(r){
   });
 }
 
+// ══════════════
+// CONTENANTS (pochons vides)
+// ══════════════
+async function renderContenants(){
+  $('content').innerHTML=`
+    <div class="card"><h3>🛍️ Contenants (pochons vides) <span class="actions"><button class="btn btn-sm" id="ct-achat">➕ Achat</button><button class="btn btn-sm" id="ct-add">➕ Contenant</button></span></h3>
+      <div class="hint">Le stock se décompte automatiquement à la production des ateliers marqués « consomme le contenant » (perçage). Lie chaque produit à son contenant dans le Référentiel.</div>
+      <div id="ct-body" style="margin-top:12px"><div class="loading">Chargement…</div></div></div>
+    <div class="card"><h3>🧾 Achats de contenants</h3>
+      <div id="ca-body" style="margin-top:12px"><div class="loading">Chargement…</div></div></div>`;
+  const f=await api('GET','/cbd/fournisseurs'); S.refs.fournisseurs=f.fournisseurs||[];
+  $('ct-add').onclick=()=>formContenant(null);
+  $('ct-achat').onclick=()=>formAchatContenant();
+  chargerContenants();
+}
+async function chargerContenants(){
+  const body=$('ct-body'); body.innerHTML='<div class="loading">Chargement…</div>';
+  const [d,a]=await Promise.all([api('GET','/cbd/contenants'),api('GET','/cbd/receptions-contenants')]);
+  if(d.error){ body.innerHTML='<div class="empty">❌ '+esc(d.error)+'</div>'; return; }
+  const C=d.contenants||[]; S.refs.contenants=C;
+  if(!C.length){ body.innerHTML='<div class="empty">Aucun contenant. Clique « ➕ Contenant ».</div>'; }
+  else{
+    const actifs=C.filter(c=>c.actif!==false);
+    const alertes=actifs.filter(c=>c.alerte).length;
+    body.innerHTML=`
+      <div class="kpis">
+        <div class="kpi"><div class="kpi-v">${actifs.length}</div><div class="kpi-l">Références actives</div></div>
+        <div class="kpi ${alertes?'k-gold':''}"><div class="kpi-v">${alertes}</div><div class="kpi-l">Sous le mini</div></div>
+      </div>
+      <div class="table-wrap"><table><thead><tr><th>Réf.</th><th>Désignation</th><th>Prix unit.</th><th>Stock</th><th>Mini</th><th>État</th><th></th></tr></thead><tbody>
+      ${C.map(c=>`<tr${c.actif===false?' style="opacity:.5"':''}><td><b>${esc(c.reference)}</b></td><td>${esc(c.designation)}</td>
+        <td>${c.prix_unitaire!=null?Number(c.prix_unitaire).toFixed(3)+' '+devise():'—'}</td>
+        <td><b>${c.stock_courant}</b></td><td>${c.stock_mini||0}</td>
+        <td>${c.actif===false?'<span class="badge b-info">inactif</span>':(c.alerte?'<span class="badge b-urgent">⚠️ réassort</span>':'<span class="badge b-ok">ok</span>')}</td>
+        <td style="white-space:nowrap"><button class="btn-icon ct-e" data-id="${c.id}">✏️</button><button class="btn-icon ct-d" data-id="${c.id}">🗑️</button></td></tr>`).join('')}
+      </tbody></table></div>`;
+    body.querySelectorAll('.ct-e').forEach(b=>b.onclick=()=>formContenant(C.find(x=>x.id===b.dataset.id)));
+    body.querySelectorAll('.ct-d').forEach(b=>b.onclick=()=>confirmModal('Supprimer ce contenant ?', async ()=>{ const r=await api('DELETE','/cbd/contenants/'+b.dataset.id); if(r.error){toast('❌ '+r.error);return;} toast('Contenant supprimé'); chargerContenants(); }));
+  }
+  const ab=$('ca-body');
+  if(a.error){ ab.innerHTML='<div class="empty">❌ '+esc(a.error)+'</div>'; return; }
+  const A=a.receptions||[];
+  ab.innerHTML=A.length?`<div class="table-wrap"><table><thead><tr><th>Date</th><th>Contenant</th><th>Quantité</th><th>Prix unit.</th><th>Fournisseur</th><th>Lot</th><th></th></tr></thead><tbody>
+    ${A.map(r=>`<tr><td>${esc(r.date_reception||'')}</td><td><b>${esc(r.contenant_reference||'—')}</b> <span class="small muted">${esc(r.contenant_designation||'')}</span></td>
+      <td>${r.quantite}</td><td>${r.prix_unitaire!=null?Number(r.prix_unitaire).toFixed(3)+' '+devise():'—'}</td>
+      <td>${esc(r.fournisseur_nom||'—')}</td><td>${esc(r.lot_fournisseur||'—')}</td>
+      <td><button class="btn-icon ca-d" data-id="${r.id}">🗑️</button></td></tr>`).join('')}
+  </tbody></table></div>`:'<div class="empty">Aucun achat enregistré.</div>';
+  ab.querySelectorAll('.ca-d').forEach(b=>b.onclick=()=>confirmModal('Supprimer cet achat ? Le stock sera recalculé.', async ()=>{ const r=await api('DELETE','/cbd/receptions-contenants/'+b.dataset.id); if(r.error){toast('❌ '+r.error);return;} toast('Achat supprimé'); chargerContenants(); }));
+}
+function formContenant(c){
+  const f=[
+    {key:'reference',label:'Référence (unique)',placeholder:'ex. PCH-10G'},
+    {key:'designation',label:'Désignation',placeholder:'ex. Pochon zip 10 g noir'},
+    {key:'prix_unitaire',label:'Prix unitaire ('+devise()+', option)',type:'number',step:'0.001'},
+    {key:'stock_mini',label:'Stock mini (alerte réassort)',type:'number',step:'1'},
+  ];
+  if(c)f.push({key:'actif',label:'Actif',type:'checkbox'});
+  openForm(c?'Modifier le contenant':'Nouveau contenant',f,
+  c?{reference:c.reference,designation:c.designation,prix_unitaire:c.prix_unitaire,stock_mini:c.stock_mini,actif:c.actif}:{stock_mini:0},
+  async (v,close,fail)=>{
+    if(!v.reference||!v.reference.trim())return fail('Référence requise');
+    if(!v.designation||!v.designation.trim())return fail('Désignation requise');
+    const body={reference:v.reference.trim(),designation:v.designation.trim(),prix_unitaire:(v.prix_unitaire===''||v.prix_unitaire==null)?null:num(v.prix_unitaire),stock_mini:num(v.stock_mini,0)};
+    if(c)body.actif=!!v.actif;
+    const res=c?await api('PATCH','/cbd/contenants/'+c.id,body):await api('POST','/cbd/contenants',body);
+    if(res.error)return fail(res.error); close(); toast(c?'✅ Contenant modifié':'✅ Contenant créé'); chargerContenants();
+  });
+}
+function formAchatContenant(){
+  const co=(S.refs.contenants||[]).filter(c=>c.actif!==false).map(c=>({value:c.id,label:c.reference+' — '+c.designation}));
+  if(!co.length){ toast('Crée d\'abord un contenant'); return; }
+  const fo=[{value:'',label:'— fournisseur —'}].concat((S.refs.fournisseurs||[]).map(f=>({value:f.id,label:f.nom})));
+  openForm('Nouvel achat de contenants',[
+    {key:'date_reception',label:'Date',type:'date'},
+    {key:'contenant_id',label:'Contenant',type:'select',options:co},
+    {key:'quantite',label:'Quantité reçue',type:'number',step:'1'},
+    {key:'prix_unitaire',label:'Prix unitaire ('+devise()+', option)',type:'number',step:'0.001'},
+    {key:'fournisseur_id',label:'Fournisseur (option)',type:'select',options:fo},
+    {key:'lot_fournisseur',label:'Lot fournisseur (option)'},
+  ],{date_reception:todayISO(),contenant_id:co[0].value},
+  async (v,close,fail)=>{
+    if(!v.contenant_id)return fail('Contenant requis');
+    if(!v.quantite||num(v.quantite)<=0)return fail('Quantité invalide');
+    const body={date_reception:v.date_reception||todayISO(),contenant_id:v.contenant_id,quantite:num(v.quantite),prix_unitaire:(v.prix_unitaire===''||v.prix_unitaire==null)?null:num(v.prix_unitaire),fournisseur_id:v.fournisseur_id||null,lot_fournisseur:v.lot_fournisseur||null};
+    const res=await api('POST','/cbd/receptions-contenants',body);
+    if(res.error)return fail(res.error); close(); toast('✅ Achat enregistré'); chargerContenants();
+  });
+}
 // ════════════════════════════════════════════════════════════
 // ATELIERS
 // ════════════════════════════════════════════════════════════
@@ -747,9 +837,9 @@ function majSub(){ document.querySelectorAll('.subtab').forEach(b=>b.classList.t
 
 async function refProduits(){
   const body=$('ref-body'); body.innerHTML='<div class="loading">Chargement…</div>';
-  const [p,v]=await Promise.all([api('GET','/cbd/produits'),api('GET','/cbd/varietes')]);
+  const [p,v,ct]=await Promise.all([api('GET','/cbd/produits'),api('GET','/cbd/varietes'),api('GET','/cbd/contenants')]);
   if(p.error){ body.innerHTML='<div class="empty">❌ '+esc(p.error)+'</div>'; return; }
-  S.refs.varietes=v.varietes||[]; const P=p.produits||[]; const pv=cfgPrix();
+  S.refs.varietes=v.varietes||[]; S.refs.contenants=(ct&&ct.contenants)||[]; const P=p.produits||[]; const pv=cfgPrix();
   body.innerHTML=`<div class="card"><h3>🌿 Produits (pochons) <span class="actions"><button class="btn btn-sm" id="p-add">➕ Produit</button></span></h3>
     ${P.length?`<div class="table-wrap"><table><thead><tr><th>Code</th><th>Désignation</th><th>Variété</th><th>Format</th><th>Mini</th><th>Cible</th>${pv?'<th>Prix</th>':''}<th>Actif</th><th></th></tr></thead><tbody>
       ${P.map(x=>`<tr class="${x.actif?'':'inactif'}"><td><b>${esc(x.code||'')}</b></td><td>${esc(x.designation||'')}</td><td>${esc(x.variete_nom||'—')}</td><td>${x.format_g!=null?x.format_g+' g':'—'}</td><td>${x.stock_mini||0}</td><td>${x.stock_cible||0}</td>${pv?`<td>${x.prix_vente!=null?x.prix_vente+' '+esc(devise()):'—'}</td>`:''}<td>${x.actif?'✅':'⛔'}</td>
@@ -770,16 +860,17 @@ function formProduit(x){
     {key:'stock_cible',label:'Stock cible',type:'number'},
   ];
   if(cfgPrix())f.push({key:'prix_vente',label:'Prix de vente ('+devise()+', option)',type:'number',step:'0.01'});
-  f.push({key:'cout_emballage',label:'Coût pochon neuf ('+devise()+', vide = défaut config)',type:'number',step:'0.001'});
+  f.push({key:'cout_emballage',label:'Coût pochon neuf ('+devise()+', vide = prix du contenant ou défaut config)',type:'number',step:'0.001'});
+  f.push({key:'contenant_id',label:'Contenant (pochon vide) utilisé',type:'select',options:[{value:'',label:'— aucun —'}].concat((S.refs.contenants||[]).map(c=>({value:c.id,label:c.reference+' — '+c.designation})))});
   f.push({key:'ordre',label:'Ordre d\'affichage',type:'number'});
   if(x)f.push({key:'actif',label:'Actif',type:'checkbox',def:true});
   openForm(x?'Modifier le produit':'Nouveau produit', f,
-    x?{code:x.code,designation:x.designation,variete_id:x.variete_id,format_g:x.format_g,stock_mini:x.stock_mini,stock_cible:x.stock_cible,prix_vente:x.prix_vente,cout_emballage:x.cout_emballage,ordre:x.ordre,actif:x.actif}:{stock_mini:0,stock_cible:0,ordre:0},
+    x?{code:x.code,designation:x.designation,variete_id:x.variete_id,format_g:x.format_g,stock_mini:x.stock_mini,stock_cible:x.stock_cible,prix_vente:x.prix_vente,cout_emballage:x.cout_emballage,contenant_id:x.contenant_id,ordre:x.ordre,actif:x.actif}:{stock_mini:0,stock_cible:0,ordre:0},
     async (v,close,fail)=>{
       if(!v.code||!v.code.trim())return fail('Code requis');
       if(!v.designation||!v.designation.trim())return fail('Désignation requise');
       if(!v.format_g||num(v.format_g)<=0)return fail('Format (g) invalide');
-      const body={code:v.code.trim(),designation:v.designation.trim(),variete_id:v.variete_id||null,format_g:num(v.format_g),stock_mini:num(v.stock_mini,0),stock_cible:num(v.stock_cible,0),prix_vente:(v.prix_vente===''||v.prix_vente==null)?null:num(v.prix_vente),cout_emballage:(v.cout_emballage===''||v.cout_emballage==null)?null:num(v.cout_emballage),ordre:num(v.ordre,0)};
+      const body={code:v.code.trim(),designation:v.designation.trim(),variete_id:v.variete_id||null,format_g:num(v.format_g),stock_mini:num(v.stock_mini,0),stock_cible:num(v.stock_cible,0),prix_vente:(v.prix_vente===''||v.prix_vente==null)?null:num(v.prix_vente),cout_emballage:(v.cout_emballage===''||v.cout_emballage==null)?null:num(v.cout_emballage),contenant_id:v.contenant_id||null,ordre:num(v.ordre,0)};
       if(x&&v.actif!==undefined)body.actif=!!v.actif;
       const res=x?await api('PATCH','/cbd/produits/'+x.id,body):await api('POST','/cbd/produits',body);
       if(res.error)return fail(res.error); close(); toast(x?'✅ Produit modifié':'✅ Produit créé'); refProduits();
