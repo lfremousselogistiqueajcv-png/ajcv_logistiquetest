@@ -650,7 +650,7 @@ function imprimerEtiquettes(id){
     cartes.push(`<div class="etiq">
       <div class="etiq-head"><b>${ETIQ_CFG.entreprise}</b><span>BL ${esc(l.bl||'—')}</span></div>
       <div class="etiq-client">${esc(l.client_nom||l.client||'')}</div>
-      <div class="etiq-adr">${esc(l.adresse||'')}${l.adresse?'<br>':''}${esc(l.ville||'')}</div>
+      <div class="etiq-adr">${esc(l.adresse||'')}${l.adresse?'<br>':''}${esc(l.ville||'')}${(l.tel1||l.tel2)?'<br>\u260e '+esc([l.tel1,l.tel2].filter(Boolean).join(' / ')):''}</div>
       <div class="etiq-colis">COLIS ${i} / ${n}</div>
       <div class="etiq-prods">${prods.map(p=>'<div>'+esc(p)+'</div>').join('')||'<div>—</div>'}</div>
       <div class="etiq-foot">Livraison ${esc(l.date_livraison||'')}</div>

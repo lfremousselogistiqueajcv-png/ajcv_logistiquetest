@@ -1,7 +1,15 @@
 {
-  "version": "2026.07.04.11",
+  "version": "2026.07.04.12",
   "app": "AJCV Logistique",
   "historique": [
+    {
+      "v": "2026.07.04.12",
+      "date": "04/07/2026",
+      "titre": "[TEST] Étiquettes : numéro de téléphone du client",
+      "notes": [
+        "☎️ L'étiquette colis affiche le téléphone du client (et le second numéro s'il existe), sous l'adresse."
+      ]
+    },
     {
       "v": "2026.07.04.11",
       "date": "04/07/2026",
