@@ -141,7 +141,7 @@ html[data-theme="light"]{
     <div class="row-check"><input type="checkbox" id="remember"><label for="remember">Se souvenir de moi</label></div>
     <div class="err" id="loginErr"></div>
     <button class="btn btn-gold btn-full" onclick="connexion()">Se connecter</button>
-    <div style="text-align:center;margin-top:14px"><a href="https://lfremousselogistiqueajcv-png.github.io/ajcv_logistique/reset.html" style="color:#FFB300;font-size:13px;text-decoration:none">Mot de passe oublié ?</a></div>
+    <div style="text-align:center;margin-top:14px"><a href="./reset.html" style="color:#FFB300;font-size:13px;text-decoration:none">Mot de passe oublié ?</a></div>
   </div>
 </div>
 
@@ -2656,7 +2656,7 @@ window.addEventListener('DOMContentLoaded',()=>{
 });
 
 // ── Auto-mise à jour + Nouveautés ───────────────────────────
-const VERSION_URL = 'https://lfremousselogistiqueajcv-png.github.io/ajcv_logistique/version.json';
+const VERSION_URL = 'version.json';
 let _verInfo = null, _verEnAttente = null;
 function _vToast(m){ try{ toast(m); }catch(_){} }
 function _vModalOuvert(){ return !!document.querySelector('.modal-bg.active'); }
