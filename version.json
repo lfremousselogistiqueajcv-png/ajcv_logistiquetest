@@ -1,7 +1,17 @@
 {
-  "version": "2026.07.04.10",
+  "version": "2026.07.04.11",
   "app": "AJCV Logistique",
   "historique": [
+    {
+      "v": "2026.07.04.11",
+      "date": "04/07/2026",
+      "titre": "[TEST] Préparation : étiquettes colis à imprimer (Zebra)",
+      "notes": [
+        "🏷️ À la validation d'une préparation, l'aperçu des étiquettes s'ouvre automatiquement : une étiquette par colis (client, adresse, N° BL, COLIS 1/N, récap produits).",
+        "🖨️ Un tap « Imprimer » → impression Android via Wi-Fi (Zebra/Mopria), format 100×150 mm.",
+        "♻️ Bouton « Réimprimer les étiquettes » sur chaque commande déjà préparée."
+      ]
+    },
     {
       "v": "2026.07.04.10",
       "date": "04/07/2026",
