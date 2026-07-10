@@ -1,7 +1,16 @@
 {
-  "version": "2026.07.04.5",
+  "version": "2026.07.04.7",
   "app": "AJCV Logistique",
   "historique": [
+    {
+      "v": "2026.07.04.7",
+      "date": "04/07/2026",
+      "titre": "[TEST] Plan de tournée : récap produits par livreur",
+      "notes": [
+        "🚚 Charge par livreur : livraisons, colis, totaux 🥤🔥🪧💳 par tournée.",
+        "🔎 Totaux cliquables : détail par client et par référence — le picking exact de chaque camion."
+      ]
+    },
     {
       "v": "2026.07.04.5",
       "date": "04/07/2026",
