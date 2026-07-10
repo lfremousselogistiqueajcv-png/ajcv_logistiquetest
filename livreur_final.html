@@ -312,7 +312,7 @@ html[data-theme="light"]{
       <div class="header-avatar" id="hAvatar">?</div>
       <div>
         <div class="header-name" id="hName">Livreur</div>
-        <div class="header-zone" id="hZone" onclick="toggleTouteIle()" style="cursor:pointer" title="Basculer Ma zone / Toute l'île">Zone —</div>
+        <div class="header-zone" id="hZone" title="Basculer Ma zone / Toute l'île">Zone —</div>
       </div>
     </div>
     <div class="header-right">
@@ -911,11 +911,11 @@ function majLabelZone() {
   const el = document.getElementById('hZone');
   if (!el) return;
   if (state.touteIle) {
-    el.textContent = '🏝️ Toute l\'île ⇄';
+    el.textContent = '🏝️ Toute l\'île';
     el.style.color = '#ffd54f';
     el.style.fontWeight = '700';
   } else if (state.modeAffecte) {
-    el.textContent = '📋 Mes livraisons ⇄';
+    el.textContent = '📋 Mes livraisons';
     el.style.color = '#81d4fa';
     el.style.fontWeight = '700';
   } else {
@@ -923,7 +923,7 @@ function majLabelZone() {
               state.zone === '🔵 Zone 2 — Livreur 2' ? 'Nord-Est' :
               state.zone === '🟠 Zone 3 — Livreur 3' ? 'Ouest' :
               state.zone || state.role || '';
-    el.textContent = (z ? z + ' (repli)' : 'Aucune affectation') + ' ⇄';
+    el.textContent = (z ? z + ' (repli)' : 'Aucune affectation') + '';
     el.style.color = '';
     el.style.fontWeight = '';
   }

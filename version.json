@@ -1,7 +1,15 @@
 {
-  "version": "2026.07.04.9",
+  "version": "2026.07.04.10",
   "app": "AJCV Logistique",
   "historique": [
+    {
+      "v": "2026.07.04.10",
+      "date": "04/07/2026",
+      "titre": "[TEST] Livreur : suppression du mode « toute l'île »",
+      "notes": [
+        "🧹 Le basculement « mes livraisons / toutes les livraisons » est retiré : chaque livreur voit uniquement sa tournée affectée par le dispatch."
+      ]
+    },
     {
       "v": "2026.07.04.9",
       "date": "04/07/2026",
