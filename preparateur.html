@@ -431,8 +431,10 @@ async function validerPrep(id){
     tpe_detail: l?detailDe(l,'tpe_detail'):{} };
   const btn=document.getElementById('val-'+id);
   if(btn){ btn.disabled=true; btn.textContent='⏳…'; }
+  const ab=new AbortController(); const tmo=setTimeout(()=>ab.abort(),60000);
   try{
-    const resp=await fetch(`${CFG.API_URL}/livraisons/preparation`,{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${state.token}`},body:JSON.stringify(body)});
+    const resp=await fetch(`${CFG.API_URL}/livraisons/preparation`,{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${state.token}`},body:JSON.stringify(body),signal:ab.signal});
+    clearTimeout(tmo);
     if(resp.status===401){ sessionExpiree(); return; }
     const r=await resp.json().catch(()=>({}));
     if(resp.ok&&r.success){
@@ -449,7 +451,8 @@ async function validerPrep(id){
       if(btn){ btn.disabled=false; btn.textContent='Valider ✓'; }
     }
   }catch(e){
-    showToast('❌ Erreur réseau','error');
+    clearTimeout(tmo);
+    showToast(e&&e.name==='AbortError'?'❌ Réseau trop lent — réessaie, tes photos sont conservées':'❌ Erreur réseau','error');
     if(btn){ btn.disabled=false; btn.textContent='Valider ✓'; }
   }
 }
@@ -595,7 +598,7 @@ function fermerNouveautes(){ document.getElementById('nouveautesModal').style.di
 restoreSession();
 verifierVersion();
 setInterval(verifierVersion, 120000);
-document.addEventListener('visibilitychange', ()=>{ if(!document.hidden){ verifierVersion(); if(state.token) chargerPrep(true); } });
+document.addEventListener('visibilitychange', ()=>{ if(!document.hidden){ verifierVersion(); } });
 document.getElementById('mdpInput').addEventListener('keydown', e=>{ if(e.key==='Enter') connexion(); });
 
 if('serviceWorker' in navigator){
@@ -603,7 +606,6 @@ if('serviceWorker' in navigator){
   try{ navigator.serviceWorker.register(URL.createObjectURL(new Blob([sw],{type:'application/javascript'}))).catch(()=>{}); }catch(_){}
 }
 </script>
-<script>document.addEventListener('DOMContentLoaded',function(){var b=document.createElement('div');b.id='test-banner';b.textContent='🧪 ENVIRONNEMENT DE TEST — données fictives, sans impact prod';document.body.appendChild(b);document.body.style.paddingTop='32px';});</script>
 <script>
 (function(){function ap(t){document.documentElement.setAttribute('data-theme',t);var b=document.getElementById('theme-btn');if(b)b.textContent=(t==='light'?'🌙':'☀️');}
 function tg(){var c=document.documentElement.getAttribute('data-theme')==='light'?'light':'dark';var n=c==='light'?'dark':'light';try{localStorage.setItem('ajcv_theme',n);}catch(_){}ap(n);}
@@ -622,6 +624,16 @@ ap(document.documentElement.getAttribute('data-theme')||'dark');var b=document.g
   window.__maintShow=showMaint;
   function chk(){ try{ fetch((CFG.API_URL)+'/maintenance/'+('preparateur'),{cache:'no-store'}).then(function(r){return r.json();}).then(function(j){ if(j&&j.maintenance) showMaint(j.message); }).catch(function(){}); }catch(e){} }
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',chk); else chk();
+})();
+</script>
+<script>/* TEST */
+(function(){
+  var b=document.createElement('div');
+  b.id='test-banner';
+  b.textContent='🧪 ENVIRONNEMENT TEST';
+  b.style.cssText='position:fixed;top:0;left:0;right:0;z-index:99999;background:#f59e0b;color:#111;font-weight:800;text-align:center;padding:4px 8px;font-size:12px;letter-spacing:.5px';
+  function add(){ if(document.getElementById('test-banner'))return; document.body.appendChild(b); document.body.style.paddingTop=(parseInt(getComputedStyle(document.body).paddingTop)||0)+24+'px'; }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',add); else add();
 })();
 </script>
 </body>
