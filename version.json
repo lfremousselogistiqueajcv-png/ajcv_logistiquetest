@@ -1,7 +1,15 @@
 {
-  "version": "2026.07.04.8",
+  "version": "2026.07.04.9",
   "app": "AJCV Logistique",
   "historique": [
+    {
+      "v": "2026.07.04.9",
+      "date": "04/07/2026",
+      "titre": "[TEST] Livreur : verrouillage après confirmation du camion",
+      "notes": [
+        "🔒 Une fois le camion confirmé (photos envoyées), impossible de décocher une livraison chargée. Le cochage d'une livraison oubliée reste possible."
+      ]
+    },
     {
       "v": "2026.07.04.8",
       "date": "04/07/2026",

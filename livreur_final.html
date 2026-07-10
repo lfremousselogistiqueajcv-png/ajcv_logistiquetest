@@ -1445,6 +1445,7 @@ async function toggleCharge(id) {
   const l = trouverLiv(id); if (!l) return;
   const set = chargeSet();
   const ok = !(l.charge === true || set.has(String(id)));
+  if (!ok && camionConfirme()) { showToast('🔒 Camion confirmé — impossible de décocher. Contacte le dépôt si besoin.',''); return; }
   if (ok) set.add(String(id)); else set.delete(String(id));
   chargeSave(set);
   l.charge = ok;
