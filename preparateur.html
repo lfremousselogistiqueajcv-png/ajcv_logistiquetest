@@ -131,7 +131,9 @@ html[data-theme="light"]{
   body.printing-etiq > *:not(#etiqOverlay){display:none!important}
   body.printing-etiq #etiqOverlay{display:block!important;position:static;background:none;padding:0;overflow:visible}
   body.printing-etiq .etiq-bar{display:none!important}
-  body.printing-etiq .etiq{margin:0;border-radius:0;page-break-after:always;width:auto;min-height:auto}
+  body.printing-etiq{margin:0!important;padding:0!important}
+  body.printing-etiq #etiqOverlay{margin:0!important}
+  body.printing-etiq .etiq{margin:0!important;border-radius:0;page-break-after:always;width:101.6mm;max-width:100%;min-height:auto}
   @page{size:101.6mm 101.6mm;margin:0}
 }
 </style>

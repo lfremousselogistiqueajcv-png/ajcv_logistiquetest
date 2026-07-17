@@ -1,7 +1,15 @@
 {
-  "version": "2026.07.04.15",
+  "version": "2026.07.04.16",
   "app": "AJCV Logistique",
   "historique": [
+    {
+      "v": "2026.07.04.16",
+      "date": "04/07/2026",
+      "titre": "[TEST] Étiquettes : calage impression (haut-gauche)",
+      "notes": [
+        "🏷️ L'étiquette est ancrée en haut à gauche de la page à l'impression, quel que soit le format papier sélectionné."
+      ]
+    },
     {
       "v": "2026.07.04.15",
       "date": "04/07/2026",
