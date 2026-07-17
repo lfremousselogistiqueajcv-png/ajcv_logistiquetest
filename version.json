@@ -1,7 +1,31 @@
 {
-  "version": "2026.07.04.12",
+  "version": "2026.07.04.15",
   "app": "AJCV Logistique",
   "historique": [
+    {
+      "v": "2026.07.04.15",
+      "date": "04/07/2026",
+      "titre": "[TEST] Étiquettes 101,6×101,6 mm",
+      "notes": [
+        "🏷️ Gabarit 4x4 pouces."
+      ]
+    },
+    {
+      "v": "2026.07.04.14",
+      "date": "04/07/2026",
+      "titre": "[TEST] Étiquettes : format Zebra ZD220T (100×150 mm)",
+      "notes": [
+        "🏷️ Gabarit 100×150 mm (ZD220T)."
+      ]
+    },
+    {
+      "v": "2026.07.04.13",
+      "date": "04/07/2026",
+      "titre": "[TEST] Étiquettes : format Brother QL-810Wc (62×100 mm)",
+      "notes": [
+        "🏷️ Gabarit adapté à la Brother QL-810Wc : étiquettes 62×100 mm (rouleaux DK-1202), typographies compactées, lisibilité préservée."
+      ]
+    },
     {
       "v": "2026.07.04.12",
       "date": "04/07/2026",
