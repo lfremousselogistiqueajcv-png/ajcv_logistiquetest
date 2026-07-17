@@ -1,7 +1,15 @@
 {
-  "version": "2026.07.04.16",
+  "version": "2026.07.04.17",
   "app": "AJCV Logistique",
   "historique": [
+    {
+      "v": "2026.07.04.17",
+      "date": "04/07/2026",
+      "titre": "[TEST] Étiquettes : pied en bas de l'étiquette",
+      "notes": [
+        "🏷️ La date de livraison redescend en bas de l'étiquette à l'impression."
+      ]
+    },
     {
       "v": "2026.07.04.16",
       "date": "04/07/2026",
