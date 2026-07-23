@@ -199,7 +199,7 @@ html[data-theme="light"]{
 <div id="toast"></div>
 
 <script>
-const CFG = { API_URL: 'https://ajcvbackend-test-production.up.railway.app' };
+const CFG = { API_URL: 'https://ajcvbackend-production.up.railway.app' };
 const VERSION_URL = 'version.json';
 const state = { token:'', prenom:'', login:'', role:'', tokenExpiry:0, orders:[], photos:{}, search:'', _date:'', volet:'apreparer', boissonsRef:[], _boId:null };
 // ── Persistance des photos (survit au rechargement Android pendant la prise) ──
@@ -380,7 +380,14 @@ function carteCommande(l, volet){
     inner+=`<span class="c-badge b-done">✅ Préparé</span></div><div class="c-qte">${qteTxt}</div>${l.date_preparation?`<div class="c-sub" style="margin-top:4px;color:#059669">🕒 préparée le ${heurePrep(l.date_preparation)}${l.prepare_par?` par ${esc(l.prepare_par)}`:''}</div>`:''}`;
     const _ph=photosDe(l);
     if(_ph.length) inner+=`<div class="thumbs-wrap">`+_ph.map(u=>`<img class="thumb-g" src="${u}" onclick="agrandir('${u.replace(/'/g,'%27')}')" alt="photo">`).join('')+`</div>`;
-    inner+=`<button class="btn-photo" style="margin-top:8px" onclick="imprimerEtiquettes('${l.id}')">🏷️ Réimprimer les étiquettes</button>`;
+    inner+=`<div style="display:flex;gap:8px;align-items:center;margin-top:10px;flex-wrap:wrap">
+      <span style="font-weight:700">📦 Colis</span>
+      <input type="number" min="1" id="mod-colis-${l.id}" value="${colisDe(l)}" style="width:72px;padding:8px;border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text);font-size:15px">
+      <label class="btn-photo" style="margin:0">📷 Ajouter<input type="file" accept="image/*" capture="environment" multiple hidden onchange="modifPhotos('${l.id}',this)"></label>
+      <button class="btn-photo" style="margin:0" onclick="enregistrerModif('${l.id}')">💾 Enregistrer</button>
+    </div>
+    <div id="mod-th-${l.id}" class="thumbs-wrap"></div>`;
+    inner+=`<button class="btn-photo" style="margin-top:8px" onclick="envoyerEtiquettes('${l.id}')">🏷️ Réimprimer les étiquettes</button>`;
     return `<div class="card done" data-search="${search}">${inner}</div>`;
   }
   if(volet==='apreparer'){
@@ -488,7 +495,7 @@ async function validerPrep(id){
       delete state.photos[id]; persisterPhotos();
       showToast('✅ Préparation validée','success');
       renderPrep();
-      try{ imprimerEtiquettes(id); }catch(_){ }
+      envoyerEtiquettes(id);
     } else {
       showToast('❌ '+((r&&r.error)||"Échec de l'envoi"),'error');
       if(btn){ btn.disabled=false; btn.textContent='Valider ✓'; }
@@ -659,6 +666,48 @@ function etiqProduits(l){
   const cad=parseInt(l.nb_cadeaux)||0; if(cad) out.push('🎁 Cadeaux × '+cad);
   return out;
 }
+async function modifPhotos(id,inp){
+  if(!state.modPhotos) state.modPhotos={};
+  if(!Array.isArray(state.modPhotos[id])) state.modPhotos[id]=[];
+  const files=Array.from(inp.files||[]); inp.value='';
+  for(const f of files){ try{ const b64=await compresserPhoto(f,1200,0.7); state.modPhotos[id].push(b64); }catch(_){ showToast('❌ Photo illisible','error'); } }
+  renderModifThumbs(id);
+}
+function renderModifThumbs(id){
+  const w=document.getElementById('mod-th-'+id); if(!w) return;
+  const arr=(state.modPhotos&&state.modPhotos[id])||[];
+  w.innerHTML=arr.map((b,i)=>`<div class="thumb-item"><img src="${b}" alt=""><button class="thumb-x" onclick="retirerModifPhoto('${id}',${i})">✕</button></div>`).join('')+(arr.length?`<span class="thumb-count">${arr.length} à ajouter</span>`:'');
+}
+function retirerModifPhoto(id,i){ if(state.modPhotos&&Array.isArray(state.modPhotos[id])){ state.modPhotos[id].splice(i,1); renderModifThumbs(id); } }
+async function enregistrerModif(id){
+  const l=(state.orders||[]).find(x=>String(x.id)===String(id)); if(!l) return;
+  const inp=document.getElementById('mod-colis-'+id);
+  const nc=inp?Math.max(1,parseInt(inp.value)||1):null;
+  const nouvelles=(state.modPhotos&&state.modPhotos[id])||[];
+  const colisChange=(nc!=null && nc!==(parseInt(l.nb_colis)||1));
+  if(!colisChange && !nouvelles.length){ showToast('Rien à modifier',''); return; }
+  const body={ id }; if(colisChange) body.nb_colis=nc; if(nouvelles.length) body.photos=nouvelles;
+  try{
+    const resp=await fetch(`${CFG.API_URL}/livraisons/preparation-modif`,{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${state.token}`},body:JSON.stringify(body)});
+    if(resp.status===401){ sessionExpiree(); return; }
+    const r=await resp.json().catch(()=>null);
+    if(r&&r.success){
+      if(colisChange){ l.nb_colis=nc; l.nbColis=nc; }
+      if(r.photos_preparation) l.photos_preparation=r.photos_preparation;
+      if(state.modPhotos) delete state.modPhotos[id];
+      renderPrep();
+      showToast(colisChange?'✅ Modifié — réimprime les étiquettes 🏷️ si besoin':'✅ Photos ajoutées','success');
+    } else showToast('❌ '+((r&&r.error)||'Erreur'),'error');
+  }catch(_){ showToast('❌ Erreur réseau','error'); }
+}
+async function envoyerEtiquettes(id){
+  try{
+    const resp=await fetch(`${CFG.API_URL}/print/etiquettes`,{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${state.token}`},body:JSON.stringify({id})});
+    const r=await resp.json().catch(()=>null);
+    if(r&&r.success) showToast('🖨️ '+(r.colis||1)+' étiquette(s) envoyée(s) à l\'imprimante','success');
+    else showToast('❌ Étiquettes : '+((r&&r.error)||'erreur'),'error');
+  }catch(_){ showToast('❌ Étiquettes : réseau — réessaie via 🏷️','error'); }
+}
 function imprimerEtiquettes(id){
   const l=(state.orders||[]).find(x=>String(x.id)===String(id));
   if(!l){ showToast('Commande introuvable','error'); return; }
@@ -711,16 +760,6 @@ ap(document.documentElement.getAttribute('data-theme')||'dark');var b=document.g
   window.__maintShow=showMaint;
   function chk(){ try{ fetch((CFG.API_URL)+'/maintenance/'+('preparateur'),{cache:'no-store'}).then(function(r){return r.json();}).then(function(j){ if(j&&j.maintenance) showMaint(j.message); }).catch(function(){}); }catch(e){} }
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',chk); else chk();
-})();
-</script>
-<script>/* TEST */
-(function(){
-  var b=document.createElement('div');
-  b.id='test-banner';
-  b.textContent='🧪 ENVIRONNEMENT TEST';
-  b.style.cssText='position:fixed;top:0;left:0;right:0;z-index:99999;background:#f59e0b;color:#111;font-weight:800;text-align:center;padding:4px 8px;font-size:12px;letter-spacing:.5px';
-  function add(){ if(document.getElementById('test-banner'))return; document.body.appendChild(b); document.body.style.paddingTop=(parseInt(getComputedStyle(document.body).paddingTop)||0)+24+'px'; }
-  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',add); else add();
 })();
 </script>
 <div id="etiqOverlay"><div class="etiq-bar"><button class="etiq-print" onclick="lancerImpressionEtiq()">🖨️ Imprimer</button><button class="etiq-close" onclick="fermerEtiquettes()">✕ Fermer</button></div><div id="etiqZone"></div></div>
