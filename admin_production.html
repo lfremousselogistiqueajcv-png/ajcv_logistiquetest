@@ -305,6 +305,7 @@ function demarrer(){
     ];
   } else {
     TABS=[
+      {id:'objectifs',label:'🎯 À produire',render:renderObjectifs},
       {id:'saisie',label:'➕ Saisie',render:renderSaisie},
       {id:'stock',label:'📋 Stock du jour',render:renderStock},
     ];
@@ -598,6 +599,7 @@ function formSaisie(){
   const maj=()=>{ const s=$('sa-at').selectedOptions[0]; const vr=s&&s.dataset.vrac==='1'; $('sa-vz').style.display=vr?'flex':'none'; $('sa-sz').style.display=vr?'none':'block'; if(!vr)majSources(); $('sa-u').textContent=(s&&s.dataset.unite)||'unité'; };
   $('sa-p').onchange=()=>{ const s=$('sa-at').selectedOptions[0]; if(s&&s.dataset.vrac!=='1') majSources(); };
   $('sa-at').onchange=maj; maj();
+  if(S._presel){ const el=$('sa-p'); if(el && [...el.options].some(o=>o.value===S._presel)) el.value=S._presel; delete S._presel; const sel=$('sa-at').selectedOptions[0]; if(sel&&sel.dataset.vrac!=='1'&&typeof majSources==='function') majSources(); }
   $('sa-go').onclick=submitProd;
 }
 async function submitProd(){
@@ -718,6 +720,26 @@ function formReception(r){
 // ══════════════
 // VENTES JOURNALIÈRES
 // ══════════════
+// ══════════════
+// À PRODUIRE (vue préparateur : les priorités du jour)
+// ══════════════
+async function renderObjectifs(){
+  $('content').innerHTML='<div class="loading">Chargement…</div>';
+  const d=await api('GET','/cbd/stock-jour?date='+todayISO());
+  if(d.error){ $('content').innerHTML='<div class="empty">❌ '+esc(d.error)+'</div>'; return; }
+  const L=(d.stock||d.lignes||[]).filter(x=>x.priorite==='urgent'||x.priorite==='a_produire')
+    .sort((a,b)=>({urgent:0,a_produire:1}[a.priorite]-{urgent:0,a_produire:1}[b.priorite]));
+  $('content').innerHTML=`<div class="card"><h3>🎯 À produire aujourd'hui</h3>
+    <div class="hint">Les priorités du jour, les urgences d'abord. Un tap sur ➕ ouvre la saisie sur le produit.</div>
+    <div style="margin-top:10px">${L.length?L.map(x=>`
+      <div class="card" style="display:flex;align-items:center;gap:10px;margin-top:8px">
+        <div style="flex:1"><b>${esc(x.code||'')}</b> <span class="small muted">${esc(x.designation||'')}</span><br>
+          <span class="small">Stock : ${x.stock_compte!=null?x.stock_compte+(x.stock_origine==='theorique'?'°':''):'—'} · À produire : <b>${x.a_produire!=null?x.a_produire:'—'}</b></span></div>
+        ${prioBadge(x.priorite)}
+        <button class="btn btn-sm" onclick="S._presel='${esc(x.produit_id||x.id||'')}';ouvrir('saisie')">➕ Saisir</button>
+      </div>`).join(''):'<div class="empty">🎉 Rien d\'urgent — tout est au niveau.</div>'}</div></div>`;
+}
+
 async function renderVentes(){
   const hier=(()=>{ const d=new Date(); d.setDate(d.getDate()-1); return d.toISOString().split('T')[0]; })();
   $('content').innerHTML=`

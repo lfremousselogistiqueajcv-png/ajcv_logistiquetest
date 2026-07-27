@@ -1,7 +1,16 @@
 {
-  "version": "2026.07.04.26",
+  "version": "2026.07.04.27",
   "app": "AJCV Logistique",
   "historique": [
+    {
+      "v": "2026.07.04.27",
+      "date": "04/07/2026",
+      "titre": "[TEST] Appli préparateur CBD : onglet « À produire »",
+      "notes": [
+        "🎯 Les préparateurs ouvrent désormais l'appli sur les priorités du jour : urgences d'abord, avec stock et quantité à produire.",
+        "➕ Un tap ouvre la saisie directement pré-remplie sur le bon produit."
+      ]
+    },
     {
       "v": "2026.07.04.26",
       "date": "04/07/2026",
