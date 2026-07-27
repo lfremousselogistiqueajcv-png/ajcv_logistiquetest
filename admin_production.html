@@ -660,10 +660,11 @@ async function chargerReceptions(){
       <div class="kpi"><div class="kpi-v">${dispo.length}</div><div class="kpi-l">Lots avec stock</div></div>
       ${dispo[0]?`<div class="kpi k-blue"><div class="kpi-v" style="font-size:18px">${esc(dispo[0].lot_vrac)}</div><div class="kpi-l">FIFO — à consommer en 1er</div></div>`:''}
     </div>
-    <div class="table-wrap"><table><thead><tr><th>Date</th><th>Lot vrac</th><th>Fournisseur</th><th>Variété</th><th>Lot fourn.</th><th>Certif</th><th>Reçu</th><th>Engagé</th><th>Restant</th><th></th></tr></thead><tbody>
+    <div class="table-wrap"><table><thead><tr><th>Date</th><th>Lot vrac</th><th>Fournisseur</th><th>Variété</th><th>Lot fourn.</th><th>Certif</th><th>Reçu</th><th>Engagé</th><th>Restant</th><th>Pièces</th><th></th></tr></thead><tbody>
       ${R.map(r=>`<tr><td>${esc(r.date_reception||'')}</td><td><b>${esc(r.lot_vrac)}</b></td><td>${esc(r.fournisseur_nom||'—')}</td><td>${esc(r.variete_nom||'—')}</td>
         <td>${esc(r.lot_fournisseur||'—')}</td><td>${esc(r.certif_fournisseur||'—')}</td><td>${fmtKg(r.quantite_kg)}</td><td>${fmtKg(r.vrac_engage_kg)}</td>
         <td><b>${fmtKg(r.stock_vrac_restant)}</b></td>
+        <td style="white-space:nowrap"><span title="Facture" style="${r.doc_facture?'':'opacity:.25'}">🧾</span> <span title="Analyse labo" style="${r.doc_labo?'':'opacity:.25'}">🧪</span> ${(r.doc_facture&&r.doc_labo)?'<span class="badge b-ok">ok</span>':'<span class="badge b-urgent">manquant</span>'}</td>
         <td style="white-space:nowrap"><button class="btn-icon rc-doc" data-id="${r.id}" title="Documents (facture, analyse labo)">📎</button><button class="btn-icon rc-e" data-id="${r.id}">✏️</button><button class="btn-icon rc-d" data-id="${r.id}">🗑️</button></td></tr>`).join('')}
     </tbody></table></div>`;
   body.querySelectorAll('.rc-doc').forEach(b=>b.onclick=()=>formDocument(b.dataset.id));
