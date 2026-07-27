@@ -347,7 +347,7 @@ function openForm(title, fields, cur, onSave){
   document.body.appendChild(bg);
   const close=()=>bg.remove();
   bg.querySelector('[data-cancel]').onclick=close;
-  bg.onclick=e=>{ if(e.target===bg)close(); };
+  bg.onmousedown=e=>{ if(e.target===bg)close(); };
   bg.querySelector('[data-save]').onclick=async ()=>{
     const vals={}; bg.querySelectorAll('[data-k]').forEach(el=>{ vals[el.dataset.k]= el.type==='checkbox'?el.checked:el.value; });
     const errEl=bg.querySelector('[data-err]'), sv=bg.querySelector('[data-save]');
@@ -366,7 +366,7 @@ function confirmModal(message, onYes, danger){
     <div class="modal-actions"><button class="btn-ghost" data-no>Annuler</button><button class="btn ${danger?'btn-danger':''}" data-yes>${danger?'Supprimer':'Confirmer'}</button></div></div>`;
   document.body.appendChild(bg);
   const close=()=>bg.remove();
-  bg.querySelector('[data-no]').onclick=close; bg.onclick=e=>{ if(e.target===bg)close(); };
+  bg.querySelector('[data-no]').onclick=close; bg.onmousedown=e=>{ if(e.target===bg)close(); };
   bg.querySelector('[data-yes]').onclick=()=>{ close(); onYes(); };
 }
 
@@ -1254,7 +1254,7 @@ function formMotDePasse(){
     <div class="modal-actions"><button class="btn-ghost" id="mp-c">Annuler</button><button class="btn" id="mp-s">Enregistrer</button></div></div>`;
   document.body.appendChild(bg);
   const close=()=>bg.remove();
-  bg.querySelector('#mp-c').onclick=close; bg.onclick=e=>{ if(e.target===bg)close(); };
+  bg.querySelector('#mp-c').onclick=close; bg.onmousedown=e=>{ if(e.target===bg)close(); };
   bg.querySelector('#mp-s').onclick=async ()=>{
     const o=bg.querySelector('#mp-o').value,n=bg.querySelector('#mp-n').value,n2=bg.querySelector('#mp-n2').value,err=bg.querySelector('#mp-err');
     if(!o||!n)return err.textContent='Tous les champs sont requis';

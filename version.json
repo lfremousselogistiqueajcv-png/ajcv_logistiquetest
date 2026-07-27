@@ -1,7 +1,15 @@
 {
-  "version": "2026.07.04.28",
+  "version": "2026.07.04.29",
   "app": "AJCV Logistique",
   "historique": [
+    {
+      "v": "2026.07.04.29",
+      "date": "04/07/2026",
+      "titre": "[TEST] Fix : les formulaires ne se ferment plus par glissé",
+      "notes": [
+        "🐛 Un clic qui glissait depuis un champ vers le fond gris fermait le formulaire (ex. stock mini des contenants). Corrigé partout : la fermeture ne se déclenche que sur un vrai clic entamé sur le fond."
+      ]
+    },
     {
       "v": "2026.07.04.28",
       "date": "04/07/2026",
