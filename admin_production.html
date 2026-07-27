@@ -294,6 +294,8 @@ function demarrer(){
       {id:'receptions',label:'📦 Réceptions',render:renderReceptions},
       {id:'contenants',label:'🛍️ Contenants',render:renderContenants},
       {id:'documents',label:'📁 Documents',render:renderDocuments},
+      {id:'tracer',label:'🔎 Traçabilité',render:renderTracer},
+      {id:'ventes',label:'🛒 Ventes',render:renderVentes},
       {id:'ateliers',label:'🏭 Ateliers',render:renderAteliers},
       {id:'ref',label:'🗂️ Référentiel',render:renderReferentiel},
       {id:'perf',label:'📈 Performance',render:renderPerformance},
@@ -551,7 +553,8 @@ async function renderSaisie(){
     <div class="card"><h3>📦 Journal de production <span class="actions"><input type="date" id="sa-listdate" class="fld" style="width:auto;padding:8px 10px" value="${_prodDate}"><button class="btn-ghost btn-sm" id="sa-refresh">🔄</button></span></h3><div id="sa-list"><div class="loading">Chargement…</div></div></div>`;
   $('sa-refresh').onclick=chargerProdJour;
   if($('sa-listdate'))$('sa-listdate').onchange=e=>{ _prodDate=e.target.value; chargerProdJour(); };
-  const [a,p,r]=await Promise.all([api('GET','/cbd/ateliers'),api('GET','/cbd/produits'),api('GET','/cbd/receptions')]);
+  const [a,p,r,pr]=await Promise.all([api('GET','/cbd/ateliers'),api('GET','/cbd/produits'),api('GET','/cbd/receptions'),api('GET','/cbd/productions')]);
+  S.refs.prodsAll=(pr&&pr.productions)||[];
   S.refs.ateliers=(a.ateliers||[]).filter(x=>x.actif!==false);
   S.refs.produits=(p.produits||[]).filter(x=>x.actif!==false);
   S.refs.receptions=(r.receptions||[]);
@@ -575,6 +578,7 @@ function formSaisie(){
     </div>
     <div class="row" id="sa-vz">
       <div class="col"><label>Lot vrac source</label><select id="sa-rc" class="fld">${orc}</select></div>
+      <div class="col" id="sa-sz" style="display:none"><label>Lots de pochons consommés (assemblage)</label><select id="sa-src" class="fld" multiple size="4"></select><div class="hint">Maintiens appuyé / Ctrl pour en choisir plusieurs.</div></div>
       <div class="col"><label>Vrac engagé (kg)</label><input id="sa-v" class="fld" type="number" min="0" step="0.001" inputmode="decimal" placeholder="0"></div>
     </div>
     <div class="row">
@@ -582,14 +586,22 @@ function formSaisie(){
       <div class="col"><label>Date</label><input id="sa-d" class="fld" type="date" value="${todayISO()}"></div>
     </div>
     <button class="btn btn-block" id="sa-go">✅ Enregistrer la production</button>`;
-  const maj=()=>{ const s=$('sa-at').selectedOptions[0]; const vr=s&&s.dataset.vrac==='1'; $('sa-vz').style.display=vr?'flex':'none'; $('sa-u').textContent=(s&&s.dataset.unite)||'unité'; };
+  const majSources=()=>{
+    const sel=$('sa-src'); if(!sel) return;
+    const vracIds=new Set((S.refs.ateliers||[]).filter(x=>x.consomme_vrac).map(x=>x.id));
+    const pid=$('sa-p').value;
+    const lots=[...new Set((S.refs.prodsAll||[]).filter(x=>x.produit_id===pid&&vracIds.has(x.atelier_id)&&x.lot_pochon).map(x=>x.lot_pochon))];
+    sel.innerHTML=lots.map(l=>`<option value="${esc(l)}">${esc(l)}</option>`).join('')||'<option value="" disabled>Aucun lot de pochons pour ce produit</option>';
+  };
+  const maj=()=>{ const s=$('sa-at').selectedOptions[0]; const vr=s&&s.dataset.vrac==='1'; $('sa-vz').style.display=vr?'flex':'none'; $('sa-sz').style.display=vr?'none':'block'; if(!vr)majSources(); $('sa-u').textContent=(s&&s.dataset.unite)||'unité'; };
+  $('sa-p').onchange=()=>{ const s=$('sa-at').selectedOptions[0]; if(s&&s.dataset.vrac!=='1') majSources(); };
   $('sa-at').onchange=maj; maj();
   $('sa-go').onclick=submitProd;
 }
 async function submitProd(){
   const q=$('sa-q').value; if(!q||num(q)<=0){ toast('❌ Quantité invalide'); return; }
   const s=$('sa-at').selectedOptions[0], vr=s&&s.dataset.vrac==='1';
-  const body={ atelier_id:$('sa-at').value, produit_id:$('sa-p').value, quantite:num(q), lot_pochon:$('sa-lot').value.trim()||null, date_prod:$('sa-d').value||todayISO(), temps_min:$('sa-t').value===''?null:num($('sa-t').value), reception_id:vr?($('sa-rc').value||null):null, vrac_engage_kg:vr?($('sa-v').value===''?null:num($('sa-v').value)):null };
+  const body={ atelier_id:$('sa-at').value, produit_id:$('sa-p').value, quantite:num(q), lot_pochon:$('sa-lot').value.trim()||null, date_prod:$('sa-d').value||todayISO(), temps_min:$('sa-t').value===''?null:num($('sa-t').value), reception_id:vr?($('sa-rc').value||null):null, vrac_engage_kg:vr?($('sa-v').value===''?null:num($('sa-v').value)):null, sources:(!vr&&$('sa-src'))?Array.from($('sa-src').selectedOptions).map(o=>o.value).filter(Boolean):undefined };
   const b=$('sa-go'); b.textContent='Enregistrement…'; b.disabled=true;
   const r=await api('POST','/cbd/productions',body);
   b.textContent='✅ Enregistrer la production'; b.disabled=false;
@@ -698,6 +710,87 @@ function formReception(r){
 // ══════════════
 // DOCUMENTS (factures, analyses labo)
 // ══════════════
+// ══════════════
+// TRAÇABILITÉ (tracer un lot)
+// ══════════════
+// ══════════════
+// VENTES JOURNALIÈRES
+// ══════════════
+async function renderVentes(){
+  const hier=(()=>{ const d=new Date(); d.setDate(d.getDate()-1); return d.toISOString().split('T')[0]; })();
+  $('content').innerHTML=`
+    <div class="card"><h3>🛒 Ventes journalières</h3>
+      <div class="hint">Saisis chaque matin les ventes de la veille (depuis ton ERP). Le stock théorique en tient compte automatiquement : dernier comptage + productions − ventes. Ressaisir une date la corrige.</div>
+      <div style="display:flex;gap:8px;align-items:center;margin-top:10px">
+        <label style="margin:0">Date des ventes</label>
+        <input type="date" class="fld" id="vt-date" value="${hier}" style="max-width:180px" onchange="chargerVentes()">
+        <button class="btn" id="vt-save" onclick="enregistrerVentes()">💾 Enregistrer</button>
+      </div>
+      <div id="vt-body" style="margin-top:12px"><div class="loading">Chargement…</div></div></div>`;
+  chargerVentes();
+}
+async function chargerVentes(){
+  const body=$('vt-body'); if(!body) return; body.innerHTML='<div class="loading">Chargement…</div>';
+  const date=$('vt-date').value;
+  const [p,v]=await Promise.all([api('GET','/cbd/produits'),api('GET','/cbd/ventes?date='+encodeURIComponent(date))]);
+  if(p.error||v.error){ body.innerHTML='<div class="empty">❌ '+esc(p.error||v.error)+'</div>'; return; }
+  const P=(p.produits||[]).filter(x=>x.actif!==false);
+  const vmapV={}; (v.ventes||[]).forEach(x=>{ vmapV[x.produit_id]=x.quantite; });
+  body.innerHTML=P.length?`<div class="table-wrap"><table><thead><tr><th>Produit</th><th style="width:140px">Vendus (pochons)</th></tr></thead><tbody>
+    ${P.map(x=>`<tr><td><b>${esc(x.code||'')}</b> <span class="small muted">${esc(x.designation||'')}</span></td>
+      <td><input type="number" min="0" class="fld vt-q" data-pid="${x.id}" value="${vmapV[x.id]!=null?vmapV[x.id]:''}" placeholder="0" style="max-width:110px"></td></tr>`).join('')}
+  </tbody></table></div>`:'<div class="empty">Aucun produit actif.</div>';
+}
+async function enregistrerVentes(){
+  const date=$('vt-date').value; if(!date){ toast('Choisis une date'); return; }
+  const lignes=Array.from(document.querySelectorAll('.vt-q'))
+    .filter(i=>i.value!=='')
+    .map(i=>({ produit_id:i.dataset.pid, quantite:parseInt(i.value)||0 }));
+  if(!lignes.length){ toast('Aucune quantité saisie'); return; }
+  const b=$('vt-save'); b.disabled=true; b.textContent='Envoi…';
+  const r=await api('POST','/cbd/ventes',{ date_vente:date, lignes });
+  b.disabled=false; b.textContent='💾 Enregistrer';
+  if(r.error){ toast('❌ '+r.error); return; }
+  toast('✅ Ventes du '+date+' enregistrées ('+r.enregistrees+' produits)');
+}
+
+async function renderTracer(){
+  $('content').innerHTML=`
+    <div class="card"><h3>🔎 Tracer un lot</h3>
+      <div class="hint">Saisis n'importe quel lot (vrac V-…, fournisseur, pochons L-…, pack P-…) : la chaîne complète s'affiche, du certificat fournisseur au pack.</div>
+      <div style="display:flex;gap:8px;margin-top:10px">
+        <input class="fld" id="tr-lot" placeholder="ex. V-260720-01 ou L-260720-02" style="flex:1" onkeydown="if(event.key==='Enter')lancerTrace()">
+        <button class="btn" onclick="lancerTrace()">Tracer</button>
+      </div>
+      <div id="tr-body" style="margin-top:14px"></div></div>`;
+  setTimeout(()=>{ const i=$('tr-lot'); if(i) i.focus(); },50);
+}
+async function lancerTrace(){
+  const lot=($('tr-lot').value||'').trim(); if(!lot){ toast('Saisis un lot'); return; }
+  const body=$('tr-body'); body.innerHTML='<div class="loading">Recherche…</div>';
+  const d=await api('GET','/cbd/tracer?lot='+encodeURIComponent(lot));
+  if(d.error){ body.innerHTML='<div class="empty">❌ '+esc(d.error)+'</div>'; return; }
+  const ico={facture:'🧾',labo:'🧪',autre:'📄'};
+  const tEnt={vrac:'lot de vrac',pochon:'lot de pochons',pack:'lot de packs'};
+  let h=`<div class="hint">Lot <b>${esc(d.entree.lot)}</b> identifié comme <b>${tEnt[d.entree.type]||d.entree.type}</b>.</div>`;
+  h+=`<h3 style="margin-top:14px">🌾 Vrac & fournisseur</h3>`;
+  h+=(d.vracs&&d.vracs.length)?d.vracs.map(v=>`<div class="card" style="margin-top:8px">
+      <div><b>${esc(v.lot_vrac||'—')}</b> · ${esc(v.variete||'—')} · reçu le ${esc(v.date_reception||'—')}</div>
+      <div class="small muted" style="margin-top:4px">Fournisseur : ${esc(v.fournisseur||'—')} · Lot fournisseur : ${esc(v.lot_fournisseur||'—')} · Certificat : ${esc(v.certif_fournisseur||'—')}</div>
+      <div class="small" style="margin-top:4px">Reçu ${fmtKg(v.quantite_kg)} · engagé ${fmtKg(v.vrac_engage_kg)} · restant <b>${fmtKg(v.vrac_restant_kg)}</b>${v.prix_achat_kg!=null?' · '+Number(v.prix_achat_kg).toFixed(2)+' '+devise()+'/kg':''}</div>
+      <div style="margin-top:6px">${(v.documents||[]).length?(v.documents||[]).map(x=>`<a href="${esc(x.url)}" target="_blank" rel="noopener" class="badge b-info" style="text-decoration:none;margin-right:6px">${ico[x.type]||'📄'} ${esc(x.nom)}</a>`).join(''):'<span class="badge b-urgent">pièces manquantes</span>'}</div>
+    </div>`).join(''):'<div class="empty">Aucune réception liée.</div>';
+  h+=`<h3 style="margin-top:14px">🫙 Lots de pochons (pesée)</h3>`;
+  h+=(d.pochons&&d.pochons.length)?`<div class="table-wrap"><table><thead><tr><th>Lot</th><th>Produit</th><th>Quantité</th><th>Vrac engagé</th><th>Date</th><th>Par</th><th>Depuis vrac</th></tr></thead><tbody>
+      ${d.pochons.map(p=>`<tr><td><b>${esc(p.lot||'—')}</b></td><td>${esc(p.produit||'')} <span class="small muted">${esc(p.designation||'')}</span></td><td>${p.quantite}</td><td>${p.vrac_engage_kg!=null?fmtKg(p.vrac_engage_kg):'—'}</td><td>${esc(p.date||'')}</td><td>${esc(p.par||'—')}</td><td>${esc(p.lot_vrac_source||'—')}</td></tr>`).join('')}
+    </tbody></table></div>`:'<div class="empty">Aucun lot de pochons.</div>';
+  h+=`<h3 style="margin-top:14px">📦 Packs (assemblage)</h3>`;
+  h+=(d.packs&&d.packs.length)?`<div class="table-wrap"><table><thead><tr><th>Lot</th><th>Produit</th><th>Quantité</th><th>Date</th><th>Par</th><th>Pochons consommés</th></tr></thead><tbody>
+      ${d.packs.map(p=>`<tr><td><b>${esc(p.lot||'—')}</b></td><td>${esc(p.produit||'')}</td><td>${p.quantite}</td><td>${esc(p.date||'')}</td><td>${esc(p.par||'—')}</td><td>${(p.lots_pochons_sources||[]).map(esc).join(', ')||'—'}</td></tr>`).join('')}
+    </tbody></table></div>`:'<div class="empty">Aucun pack lié (les packs déclarent leurs lots sources à la saisie).</div>';
+  body.innerHTML=h;
+}
+
 async function renderDocuments(){
   $('content').innerHTML=`
     <div class="card"><h3>📁 Documents <span class="actions"><button class="btn btn-sm" id="doc-add">➕ Document</button></span></h3>

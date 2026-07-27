@@ -1,7 +1,27 @@
 {
-  "version": "2026.07.04.22",
+  "version": "2026.07.04.24",
   "app": "AJCV Logistique",
   "historique": [
+    {
+      "v": "2026.07.04.24",
+      "date": "04/07/2026",
+      "titre": "[TEST] Production CBD : ventes journalières + stock théorique",
+      "notes": [
+        "🛒 Nouvel onglet Ventes : chaque matin, saisis les ventes de la veille par produit (date par défaut : hier). Ressaisir une date la corrige.",
+        "📊 Stock théorique automatique : sans comptage du jour, le stock affiché = dernier comptage + pesées − assemblages − ventes. Le comptage physique reste le maître quand il existe.",
+        "ℹ️ Redéploiement du backend test nécessaire."
+      ]
+    },
+    {
+      "v": "2026.07.04.23",
+      "date": "04/07/2026",
+      "titre": "[TEST] Production CBD : traçabilité complète (Phase C)",
+      "notes": [
+        "🔎 Nouvel onglet Traçabilité : saisis n'importe quel lot (vrac, fournisseur, pochons, pack) → la chaîne complète s'affiche, du certificat fournisseur au pack, avec les documents liés.",
+        "📦 À la saisie d'une production d'assemblage, sélection des lots de pochons consommés — le lien pack → pochons → vrac est enregistré.",
+        "ℹ️ Redéploiement du backend test nécessaire."
+      ]
+    },
     {
       "v": "2026.07.04.22",
       "date": "04/07/2026",
