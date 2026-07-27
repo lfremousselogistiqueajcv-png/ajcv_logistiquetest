@@ -1,108 +1,138 @@
 {
-  "version": "2026.07.04.15",
+  "version": "2026.07.04.20",
   "app": "AJCV Logistique",
   "historique": [
     {
+      "v": "2026.07.04.20",
+      "date": "04/07/2026",
+      "titre": "[TEST] Production CBD : numéros de lot automatiques",
+      "notes": [
+        "🔢 Les numéros de lot se génèrent automatiquement si le champ est laissé vide : V-AAMMJJ-NN (réceptions vrac), L-AAMMJJ-NN (lots de pochons), P-AAMMJJ-NN (packs).",
+        "✍️ La saisie manuelle reste possible pour coller à un lot existant.",
+        "ℹ️ Nécessite le redéploiement du backend test."
+      ]
+    },
+    {
+      "v": "2026.07.04.19",
+      "date": "04/07/2026",
+      "titre": "[TEST] Production CBD : garde-fous métier",
+      "notes": [
+        "🛡️ La pesée refuse d'engager plus de vrac qu'il n'en reste sur le lot (message : restant / demandé).",
+        "🛡️ Le perçage refuse de consommer plus de pochons vides que le stock du contenant (message : en stock / nécessaires).",
+        "ℹ️ Nécessite le redéploiement du backend test (index.js)."
+      ]
+    },
+    {
+      "v": "2026.07.04.18",
+      "date": "04/07/2026",
+      "titre": "[TEST] Production CBD : mise à jour automatique",
+      "notes": [
+        "🔄 L'admin production se met à jour automatiquement dès qu'une nouvelle version est publiée (badge de version dans l'en-tête, vérification à l'ouverture puis toutes les 2 minutes)."
+      ]
+    },
+    {
+      "v": "2026.07.04.17",
+      "date": "04/07/2026",
+      "titre": "[TEST] Étiquettes : pied en bas de l'étiquette",
+      "notes": [
+        "🏷️ La date de livraison redescend en bas de l'étiquette à l'impression."
+      ]
+    },
+    {
+      "v": "2026.07.04.16",
+      "date": "04/07/2026",
+      "titre": "[TEST] Étiquettes : calage impression (haut-gauche)",
+      "notes": [
+        "🏷️ L'étiquette est ancrée en haut à gauche de la page à l'impression, quel que soit le format papier sélectionné."
+      ]
+    },
+    {
       "v": "2026.07.04.15",
       "date": "04/07/2026",
-      "titre": "Préparation : modifier une préparation validée",
+      "titre": "[TEST] Étiquettes 101,6×101,6 mm",
       "notes": [
-        "✏️ Sur chaque commande préparée : modifier le nombre de colis et/ou ajouter des photos, puis 💾 Enregistrer.",
-        "📷 Les nouvelles photos s'ajoutent aux existantes (rien n'est écrasé).",
-        "🏷️ Si le nombre de colis change, un rappel invite à réimprimer les étiquettes."
+        "🏷️ Gabarit 4x4 pouces."
       ]
     },
     {
       "v": "2026.07.04.14",
       "date": "04/07/2026",
-      "titre": "Étiquettes automatiques sur l'imprimante du dépôt",
+      "titre": "[TEST] Étiquettes : format Zebra ZD220T (100×150 mm)",
       "notes": [
-        "🖨️ À la validation d'une préparation, les étiquettes colis s'impriment automatiquement sur la Zebra du dépôt (serveur d'impression Raspberry Pi) — plus aucune manipulation.",
-        "🏷️ Le bouton « Réimprimer les étiquettes » renvoie le jeu complet sur l'imprimante.",
-        "✨ Étiquettes en ZPL natif 101,6×101,6 : client, adresse, téléphone, N° BL, COLIS 1/N, récap produits, date."
+        "🏷️ Gabarit 100×150 mm (ZD220T)."
       ]
     },
     {
       "v": "2026.07.04.13",
       "date": "04/07/2026",
-      "titre": "Étiquettes : format 101,6 × 101,6 mm (rouleaux Zebra en stock)",
+      "titre": "[TEST] Étiquettes : format Brother QL-810Wc (62×100 mm)",
       "notes": [
-        "🏷️ Gabarit calé sur les étiquettes réelles : 101,6 × 101,6 mm (4\"×4\", mandrin 25 mm), thermique direct."
+        "🏷️ Gabarit adapté à la Brother QL-810Wc : étiquettes 62×100 mm (rouleaux DK-1202), typographies compactées, lisibilité préservée."
       ]
     },
     {
       "v": "2026.07.04.12",
       "date": "04/07/2026",
-      "titre": "Préparation : les photos survivent aux rechargements",
+      "titre": "[TEST] Étiquettes : numéro de téléphone du client",
       "notes": [
-        "💾 Chaque photo prise est immédiatement sauvegardée sur le téléphone et restaurée automatiquement si la page recharge (Android ferme parfois l'appli pendant que l'appareil photo est ouvert, pour libérer de la mémoire).",
-        "✅ Résultat : plus aucune photo perdue — même si l'écran se recharge, les photos déjà prises réapparaissent et la préparation continue.",
-        "🧹 La sauvegarde se vide à chaque validation et chaque nouveau jour."
+        "☎️ L'étiquette colis affiche le téléphone du client (et le second numéro s'il existe), sous l'adresse."
       ]
     },
     {
       "v": "2026.07.04.11",
       "date": "04/07/2026",
-      "titre": "Préparation : fiabilisation de l'enchaînement des validations",
+      "titre": "[TEST] Préparation : étiquettes colis à imprimer (Zebra)",
       "notes": [
-        "🛡️ L'ouverture des étiquettes ne peut plus interrompre le flux : la liste se rafraîchit d'abord, l'aperçu s'ouvre ensuite, isolé."
+        "🏷️ À la validation d'une préparation, l'aperçu des étiquettes s'ouvre automatiquement : une étiquette par colis (client, adresse, N° BL, COLIS 1/N, récap produits).",
+        "🖨️ Un tap « Imprimer » → impression Android via Wi-Fi (Zebra/Mopria), format 100×150 mm.",
+        "♻️ Bouton « Réimprimer les étiquettes » sur chaque commande déjà préparée."
       ]
     },
     {
       "v": "2026.07.04.10",
       "date": "04/07/2026",
-      "titre": "Étiquettes : format Zebra ZD220T (100×150 mm)",
+      "titre": "[TEST] Livreur : suppression du mode « toute l'île »",
       "notes": [
-        "🏷️ Gabarit étiquettes au format 100×150 mm pour la Zebra ZD220T (étiquettes thermiques directes, sans ruban)."
+        "🧹 Le basculement « mes livraisons / toutes les livraisons » est retiré : chaque livreur voit uniquement sa tournée affectée par le dispatch."
       ]
     },
     {
       "v": "2026.07.04.9",
       "date": "04/07/2026",
-      "titre": "Étiquettes : format Brother QL-810Wc (62×100 mm)",
+      "titre": "[TEST] Livreur : verrouillage après confirmation du camion",
       "notes": [
-        "🏷️ Gabarit étiquettes adapté à la Brother QL-810Wc : 62×100 mm (rouleaux DK-1202)."
+        "🔒 Une fois le camion confirmé (photos envoyées), impossible de décocher une livraison chargée. Le cochage d'une livraison oubliée reste possible."
       ]
     },
     {
       "v": "2026.07.04.8",
       "date": "04/07/2026",
-      "titre": "Récaps produits, étiquettes colis et verrouillage chargement",
+      "titre": "[TEST] Livreur : récap par produit (chargement + livraisons)",
       "notes": [
-        "🚚 Plan de tournée (admin) : récap par livreur — livraisons, colis, totaux 🥤🔥🪧💳 cliquables avec détail par client et référence.",
-        "📋 Appli livreur : le récap produits affiche le total par référence (ex. DESPERADOS : 20) en tête, puis le détail par client — accessible depuis le Chargement et les Livraisons.",
-        "🔒 Une fois le camion confirmé, impossible de décocher une livraison chargée (le dépôt garde la main via « Permettre de recommencer »).",
-        "🧹 Le basculement « toute l'île » est retiré : chaque livreur voit sa tournée affectée.",
-        "🏷️ Préparation : à la validation, les étiquettes colis s'ouvrent automatiquement (client, adresse, ☎ téléphone, N° BL, COLIS 1/N, récap produits) — impression Wi-Fi Zebra, format 100×150 mm, bouton Réimprimer sur les commandes préparées."
+        "📋 Le récap 🥤🔥🪧💳 affiche désormais le total par produit (ex. DESPERADOS : 20) en tête, puis le détail par client.",
+        "🚚 Nouvelle barre produits cliquable dans l'écran Livraisons pour retrouver les quantités en un geste."
       ]
     },
     {
       "v": "2026.07.04.7",
       "date": "04/07/2026",
-      "titre": "Plan de tournée : récap produits par livreur",
+      "titre": "[TEST] Plan de tournée : récap produits par livreur",
       "notes": [
-        "🚚 La charge par livreur affiche désormais, pour chaque tournée : livraisons, colis, et totaux 🥤 boissons · 🔥 charbons · 🪧 PLV · 💳 TPE.",
-        "🔎 Chaque total est cliquable : détail par client et par référence (même vue que les KPI) — le picking exact de chaque camion."
-      ]
-    },
-    {
-      "v": "2026.07.04.6",
-      "date": "04/07/2026",
-      "titre": "Préparation : photos fluides (fin des 20 secondes perdues)",
-      "notes": [
-        "📷 L'appli ne recharge plus toute la liste au retour de l'appareil photo : la photo s'affiche immédiatement, plus de réactualisation entre les prises, plus de photo perdue pendant un rechargement.",
-        "⏱️ La validation a désormais un délai maximum (60 s) : si le réseau pend, message clair et les photos restent conservées pour réessayer.",
-        "🔄 La liste se rafraîchit toujours au lancement, après chaque validation et via le bouton actualiser."
+        "🚚 Charge par livreur : livraisons, colis, totaux 🥤🔥🪧💳 par tournée.",
+        "🔎 Totaux cliquables : détail par client et par référence — le picking exact de chaque camion."
       ]
     },
     {
       "v": "2026.07.04.5",
       "date": "04/07/2026",
-      "titre": "Admin : toper « Livré » sur une livraison",
+      "titre": "[TEST] Production CBD : gestion des contenants (pochons vides)",
       "notes": [
-        "✅ Nouveau bouton sur chaque ligne de l'onglet Livraisons : marquer une livraison « Livré » sans passer par l'appli livreur (avec confirmation).",
-        "↩️ Recliquer permet de remettre « À livrer » (efface la date de livraison).",
-        "🕒 La date et l'heure de livraison sont posées au moment du top (statistiques cohérentes)."
+        "🛍️ Nouvel onglet Contenants : référentiel des pochons vides (référence, prix, stock mini), stock courant calculé et alerte réassort.",
+        "🧾 Achats de contenants : réceptions avec quantité, prix du lot et fournisseur.",
+        "⚙️ Consommation automatique du stock par l'atelier de perçage (paramétrable par atelier).",
+        "🔗 Chaque produit peut être lié à son contenant (Référentiel).",
+        "💰 Coût pochon dans la marge : coût du produit → prix du contenant lié → défaut config.",
+        "⚠️ SQL : cbd_contenants.sql (Supabase test)."
       ]
     },
     {

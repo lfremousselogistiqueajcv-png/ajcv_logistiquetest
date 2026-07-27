@@ -168,7 +168,7 @@ html[data-theme="light"] #test-banner{box-shadow:0 2px 8px rgba(0,0,0,.18)}
 <!-- APP -->
 <div id="app" class="hidden">
   <div class="topbar">
-    <div class="brand">🌿 <span>Production</span> CBD</div>
+    <div class="brand">🌿 <span>Production</span> CBD</div><span id="verBadge" style="font-size:11px;opacity:.55;margin-left:8px"></span>
     <div style="display:flex;align-items:center;gap:8px">
       <div class="who" id="who"></div>
       <button class="btn-ghost btn-sm" id="pwd" title="Changer mon mot de passe">🔑</button>
@@ -619,7 +619,7 @@ function formProduction(p){
   openForm('Modifier la production'+(p.produit_code?' — '+p.produit_code:''),[
     {key:'atelier_id',label:'Atelier',type:'select',options:oa},
     {key:'quantite',label:'Quantité',type:'number',min:1},
-    {key:'lot_pochon',label:'N° lot pochon (option)'},
+    {key:'lot_pochon',label:'N° lot (vide = automatique)',placeholder:'auto : L-AAMMJJ-NN'},
     {key:'reception_id',label:'Lot vrac source (option)',type:'select',options:orc},
     {key:'vrac_engage_kg',label:'Vrac engagé (kg, option)',type:'number',step:'0.001'},
     {key:'temps_min',label:'Temps passé (min, option)',type:'number'},
@@ -673,7 +673,7 @@ function formReception(r){
   const vo=[{value:'',label:'— variété —'}].concat((S.refs.varietes||[]).map(v=>({value:v.id,label:v.nom})));
   openForm(r?'Modifier la réception':'Nouvelle réception',[
     {key:'date_reception',label:'Date de réception',type:'date'},
-    {key:'lot_vrac',label:'N° lot vrac (unique)',placeholder:'ex. VR-2026-001'},
+    {key:'lot_vrac',label:'N° lot vrac (vide = automatique)',placeholder:'auto : V-AAMMJJ-NN'},
     {key:'fournisseur_id',label:'Fournisseur',type:'select',options:fo},
     {key:'variete_id',label:'Variété',type:'select',options:vo},
     {key:'lot_fournisseur',label:'Lot fournisseur (option)'},
@@ -682,9 +682,8 @@ function formReception(r){
     {key:'prix_achat_kg',label:'Prix d\'achat ('+devise()+'/kg, option)',type:'number',step:'0.01'},
   ], r?{date_reception:r.date_reception,lot_vrac:r.lot_vrac,fournisseur_id:r.fournisseur_id,variete_id:r.variete_id,lot_fournisseur:r.lot_fournisseur,certif_fournisseur:r.certif_fournisseur,quantite_kg:r.quantite_kg,prix_achat_kg:r.prix_achat_kg}:{date_reception:todayISO()},
   async (v,close,fail)=>{
-    if(!v.lot_vrac||!v.lot_vrac.trim())return fail('N° lot vrac requis');
     if(!v.quantite_kg||num(v.quantite_kg)<=0)return fail('Quantité (kg) invalide');
-    const body={date_reception:v.date_reception||todayISO(),fournisseur_id:v.fournisseur_id||null,variete_id:v.variete_id||null,lot_vrac:v.lot_vrac.trim(),lot_fournisseur:v.lot_fournisseur||null,certif_fournisseur:v.certif_fournisseur||null,quantite_kg:num(v.quantite_kg),prix_achat_kg:(v.prix_achat_kg===''||v.prix_achat_kg==null)?null:num(v.prix_achat_kg)};
+    const body={date_reception:v.date_reception||todayISO(),fournisseur_id:v.fournisseur_id||null,variete_id:v.variete_id||null,lot_vrac:(v.lot_vrac||'').trim(),lot_fournisseur:v.lot_fournisseur||null,certif_fournisseur:v.certif_fournisseur||null,quantite_kg:num(v.quantite_kg),prix_achat_kg:(v.prix_achat_kg===''||v.prix_achat_kg==null)?null:num(v.prix_achat_kg)};
     const res=r?await api('PATCH','/cbd/receptions/'+r.id,body):await api('POST','/cbd/receptions',body);
     if(res.error)return fail(res.error); close(); toast(r?'✅ Réception modifiée':'✅ Réception ajoutée'); chargerReceptions();
   });
@@ -1051,6 +1050,33 @@ function formMotDePasse(){
     close(); toast('✅ Mot de passe modifié');
   };
 }
+
+// ── Mise à jour automatique (version.json du repo) ────────────────
+const VERSION_URL='version.json';
+let _verEnAttente=null;
+async function verifierVersion(){
+  try{
+    const r=await fetch(VERSION_URL+'?t='+Date.now(),{cache:'no-store'});
+    if(!r.ok) return;
+    const info=await r.json();
+    if(!info||!info.version) return;
+    let vue=localStorage.getItem('ajcvcbd_version');
+    if(!vue){ localStorage.setItem('ajcvcbd_version',info.version); vue=info.version; }
+    const b=document.getElementById('verBadge'); if(b) b.textContent='v'+vue;
+    if(info.version!==vue){ _verEnAttente=info; appliquerMaj(); }
+  }catch(_){}
+}
+function appliquerMaj(){
+  if(!_verEnAttente) return;
+  const v=_verEnAttente.version;
+  localStorage.setItem('ajcvcbd_version',v);
+  toast('🔄 Mise à jour '+v+'…');
+  setTimeout(()=>location.replace(location.pathname+'?v='+encodeURIComponent(v)),700);
+}
+verifierVersion();
+setInterval(verifierVersion,120000);
+document.addEventListener('visibilitychange',()=>{ if(!document.hidden) verifierVersion(); });
+
 </script>
 <script>
 (function(){
