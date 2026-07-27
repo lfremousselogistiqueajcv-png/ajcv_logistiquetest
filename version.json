@@ -1,7 +1,18 @@
 {
-  "version": "2026.07.04.25",
+  "version": "2026.07.04.26",
   "app": "AJCV Logistique",
   "historique": [
+    {
+      "v": "2026.07.04.26",
+      "date": "04/07/2026",
+      "titre": "[TEST] Dashboard : couverture de stock, origine, alertes documents",
+      "notes": [
+        "⏳ Couverture en jours sur chaque produit : au rythme des ventes des 7 derniers jours, combien de jours de stock restent (rouge si ≤ 3 j).",
+        "° Le stock théorique est marqué d'un ° (le comptage physique reste sans marque).",
+        "📁 Bandeau d'alerte si des lots de vrac n'ont pas leur dossier complet (facture + analyse labo) — clic direct vers les Documents.",
+        "ℹ️ Redéploiement du backend test nécessaire."
+      ]
+    },
     {
       "v": "2026.07.04.25",
       "date": "04/07/2026",

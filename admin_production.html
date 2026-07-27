@@ -448,11 +448,12 @@ async function chargerDashboard(silent){
   </div>`;
 
   const prio=stock.slice().sort((a,b)=>({urgent:0,a_produire:1,ok:2,null:3}[a.priorite]??3)-({urgent:0,a_produire:1,ok:2,null:3}[b.priorite]??3));
-  const stockHtml=`<div class="card">
+  const alertePieces = d.pieces_manquantes>0?`<div class="card" style="cursor:pointer" onclick="ouvrir('documents')"><b>📁 ${d.pieces_manquantes} lot(s) de vrac sans dossier complet</b> <span class="small muted">(facture ou analyse labo manquante — clique pour ouvrir les Documents)</span></div>`:'';
+  const stockHtml=alertePieces+`<div class="card">
     <h3>🎯 Priorités de réassort <span class="small muted">${urgent} urgent(s)</span></h3>
     <div class="table-wrap"><table><thead><tr><th>Réf.</th><th>Stock</th><th>À produire</th><th>Priorité</th><th>Fait</th><th>Reste</th></tr></thead><tbody>
       ${prio.length?prio.map(s=>`<tr><td><b>${esc(s.code||'')}</b> <span class="small muted">${esc(s.designation||'')}</span></td>
-        <td>${s.stock_compte!=null?s.stock_compte:'<span class="muted">non compté</span>'}</td>
+        <td>${s.stock_compte!=null?`${s.stock_compte}${s.stock_origine==='theorique'?'<span class="muted" title="Stock théorique (dernier comptage + productions − ventes)">°</span>':''}${s.couverture_jours!=null?` <span class="badge ${s.couverture_jours<=3?'b-urgent':'b-info'}" title="Couverture au rythme des ventes des 7 derniers jours">⏳ ${s.couverture_jours} j</span>`:''}`:'<span class="muted">non compté</span>'}</td>
         <td><b>${s.a_produire!=null?s.a_produire:'—'}</b></td>
         <td>${prioBadge(s.priorite)}</td><td>${s.produit_auj||0}</td><td>${s.reste!=null?s.reste:'—'}</td></tr>`).join(''):'<tr><td colspan="6" class="empty">Aucun produit actif.</td></tr>'}
     </tbody></table></div>
