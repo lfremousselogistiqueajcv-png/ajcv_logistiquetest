@@ -1,7 +1,17 @@
 {
-  "version": "2026.07.04.20",
+  "version": "2026.07.04.21",
   "app": "AJCV Logistique",
   "historique": [
+    {
+      "v": "2026.07.04.21",
+      "date": "04/07/2026",
+      "titre": "[TEST] Production CBD : documents de traçabilité",
+      "notes": [
+        "📁 Nouvel onglet Documents : factures d'achat et analyses laboratoire, filtrables par type, liées aux lots de vrac.",
+        "📎 Bouton sur chaque réception pour joindre directement une pièce au lot (PDF ou photo, max 7 Mo).",
+        "🔐 Réservé au responsable · chaque ajout/suppression est tracé."
+      ]
+    },
     {
       "v": "2026.07.04.20",
       "date": "04/07/2026",
