@@ -1,7 +1,15 @@
 {
-  "version": "2026.07.04.27",
+  "version": "2026.07.04.28",
   "app": "AJCV Logistique",
   "historique": [
+    {
+      "v": "2026.07.04.28",
+      "date": "04/07/2026",
+      "titre": "[TEST] Production CBD : exports CSV",
+      "notes": [
+        "⬇️ Nouvel onglet Exports : réceptions, productions, stock du jour et ventes (90 jours) en CSV format Excel, un tap chacun."
+      ]
+    },
     {
       "v": "2026.07.04.27",
       "date": "04/07/2026",

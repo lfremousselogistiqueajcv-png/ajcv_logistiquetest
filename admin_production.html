@@ -301,6 +301,7 @@ function demarrer(){
       {id:'ref',label:'🗂️ Référentiel',render:renderReferentiel},
       {id:'perf',label:'📈 Performance',render:renderPerformance},
       {id:'prepa',label:'👥 Préparateurs',render:renderPreparateurs},
+      {id:'exports',label:'⬇️ Exports',render:renderExports},
       {id:'param',label:'⚙️ Paramètres',render:renderConfig},
     ];
   } else {
@@ -738,6 +739,38 @@ async function renderObjectifs(){
         ${prioBadge(x.priorite)}
         <button class="btn btn-sm" onclick="S._presel='${esc(x.produit_id||x.id||'')}';ouvrir('saisie')">➕ Saisir</button>
       </div>`).join(''):'<div class="empty">🎉 Rien d\'urgent — tout est au niveau.</div>'}</div></div>`;
+}
+
+// ══════════════
+// EXPORTS CSV
+// ══════════════
+function telechargerCSV(nom, lignes){
+  if(!lignes || !lignes.length){ toast('Rien à exporter'); return; }
+  const cols=[...new Set(lignes.flatMap(l=>Object.keys(l)))].filter(c=>typeof lignes[0][c]!=='object'||lignes[0][c]===null);
+  const cell=v=>{ if(v==null)return''; const s=String(v).replace(/"/g,'""'); return /[;"\n]/.test(s)?'"'+s+'"':s; };
+  const csv='\ufeff'+cols.join(';')+'\n'+lignes.map(l=>cols.map(c=>cell(l[c])).join(';')).join('\n');
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));
+  a.download=nom+'_'+todayISO()+'.csv'; a.click(); URL.revokeObjectURL(a.href);
+  toast('⬇️ '+nom+' exporté ('+lignes.length+' lignes)');
+}
+async function renderExports(){
+  $('content').innerHTML=`<div class="card"><h3>⬇️ Exports CSV</h3>
+    <div class="hint">Format Excel (séparateur ; , accents gérés). Chaque export contient toutes les colonnes.</div>
+    <div style="display:flex;flex-direction:column;gap:10px;margin-top:12px;max-width:420px">
+      <button class="btn" onclick="expReceptions()">📦 Réceptions de vrac</button>
+      <button class="btn" onclick="expProductions()">🏭 Productions (tout l'historique)</button>
+      <button class="btn" onclick="expStock()">📋 Stock du jour</button>
+      <button class="btn" onclick="expVentes()">🛒 Ventes (tout l'historique)</button>
+    </div></div>`;
+}
+async function expReceptions(){ const d=await api('GET','/cbd/receptions'); if(d.error){toast('❌ '+d.error);return;} telechargerCSV('receptions', d.receptions||[]); }
+async function expProductions(){ const d=await api('GET','/cbd/productions'); if(d.error){toast('❌ '+d.error);return;} telechargerCSV('productions', d.productions||[]); }
+async function expStock(){ const d=await api('GET','/cbd/stock-jour?date='+todayISO()); if(d.error){toast('❌ '+d.error);return;} telechargerCSV('stock_jour', d.lignes||[]); }
+async function expVentes(){
+  const out=[]; let dt=new Date();
+  for(let i=0;i<90;i++){ const ds=dt.toISOString().split('T')[0]; const d=await api('GET','/cbd/ventes?date='+ds); (d.ventes||[]).forEach(v=>out.push(v)); dt.setDate(dt.getDate()-1); if(i===0&&d.error){toast('❌ '+d.error);return;} }
+  telechargerCSV('ventes_90j', out);
 }
 
 async function renderVentes(){
