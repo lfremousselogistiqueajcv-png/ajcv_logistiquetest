@@ -1,7 +1,16 @@
 {
-  "version": "2026.07.04.24",
+  "version": "2026.07.04.25",
   "app": "AJCV Logistique",
   "historique": [
+    {
+      "v": "2026.07.04.25",
+      "date": "04/07/2026",
+      "titre": "[TEST] Production CBD : réorganisation des onglets",
+      "notes": [
+        "🗂️ Nouvel ordre : Ventes · Stock du jour · Saisie · Réceptions · Contenants · Documents · Traçabilité · Ateliers · Tableau de bord · Référentiel · Performance · Préparateurs · Paramètres.",
+        "🛒 L'appli s'ouvre sur les Ventes — le geste du matin."
+      ]
+    },
     {
       "v": "2026.07.04.24",
       "date": "04/07/2026",

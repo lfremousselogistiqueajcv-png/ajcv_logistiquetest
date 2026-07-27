@@ -287,16 +287,17 @@ function demarrer(){
   document.title=(S.mode==='responsable'?'🌿 Production CBD — AJCV':'🌿 Préparateur CBD — AJCV');
   $('who').innerHTML=esc((u.prenom||'')+' '+(u.nom||'')).trim()+'<br>'+(S.mode==='responsable'?'Responsable':'Préparateur'+(S.forced&&['Admin','Depot'].includes(u.role)?' · aperçu':''));
   if(S.mode==='responsable'){
+    // Ordre des onglets — modifiable ici librement (une ligne = un onglet)
     TABS=[
-      {id:'dash',label:'📊 Tableau de bord',render:renderDashboard},
+      {id:'ventes',label:'🛒 Ventes',render:renderVentes},
       {id:'stock',label:'📋 Stock du jour',render:renderStock},
       {id:'saisie',label:'➕ Saisie',render:renderSaisie},
       {id:'receptions',label:'📦 Réceptions',render:renderReceptions},
       {id:'contenants',label:'🛍️ Contenants',render:renderContenants},
       {id:'documents',label:'📁 Documents',render:renderDocuments},
       {id:'tracer',label:'🔎 Traçabilité',render:renderTracer},
-      {id:'ventes',label:'🛒 Ventes',render:renderVentes},
       {id:'ateliers',label:'🏭 Ateliers',render:renderAteliers},
+      {id:'dash',label:'📊 Tableau de bord',render:renderDashboard},
       {id:'ref',label:'🗂️ Référentiel',render:renderReferentiel},
       {id:'perf',label:'📈 Performance',render:renderPerformance},
       {id:'prepa',label:'👥 Préparateurs',render:renderPreparateurs},
