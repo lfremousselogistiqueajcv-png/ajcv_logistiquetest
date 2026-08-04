@@ -1,7 +1,15 @@
 {
-  "version": "2026.07.04.30",
+  "version": "2026.07.04.31",
   "app": "AJCV Logistique",
   "historique": [
+    {
+      "v": "2026.07.04.31",
+      "date": "29/07/2026",
+      "titre": "[TEST] Pointage : chronologie complète",
+      "notes": [
+        "🕐 Chaque pointage affiche désormais sa chronologie horodatée complète : ▶️ 07:32 → ⏸️ 09:15 → ▶️ 09:40 → 🏁 16:05 — côté préparateur et dans le tableau responsable."
+      ]
+    },
     {
       "v": "2026.07.04.30",
       "date": "29/07/2026",
