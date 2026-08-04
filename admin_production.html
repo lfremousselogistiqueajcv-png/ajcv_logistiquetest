@@ -300,12 +300,14 @@ function demarrer(){
       {id:'dash',label:'📊 Tableau de bord',render:renderDashboard},
       {id:'ref',label:'🗂️ Référentiel',render:renderReferentiel},
       {id:'perf',label:'📈 Performance',render:renderPerformance},
+      {id:'pointage',label:'⏱️ Pointages',render:renderPointage},
       {id:'prepa',label:'👥 Préparateurs',render:renderPreparateurs},
       {id:'exports',label:'⬇️ Exports',render:renderExports},
       {id:'param',label:'⚙️ Paramètres',render:renderConfig},
     ];
   } else {
     TABS=[
+      {id:'pointage',label:'⏱️ Pointage',render:renderPointage},
       {id:'objectifs',label:'🎯 À produire',render:renderObjectifs},
       {id:'saisie',label:'➕ Saisie',render:renderSaisie},
       {id:'stock',label:'📋 Stock du jour',render:renderStock},
@@ -724,6 +726,42 @@ function formReception(r){
 // ══════════════
 // À PRODUIRE (vue préparateur : les priorités du jour)
 // ══════════════
+// ══════════════
+// POINTAGE (temps de production)
+// ══════════════
+const _PT_LBL={debut:'▶️ Démarrer la journée',pause:'⏸️ Pause',reprise:'▶️ Reprendre',cloture:'🏁 Clôturer la journée'};
+const _PT_ETAT={debut:'🟢 En production',reprise:'🟢 En production',pause:'🟡 En pause',cloture:'🔴 Journée clôturée'};
+async function renderPointage(){
+  $('content').innerHTML='<div class="loading">Chargement…</div>';
+  const d=await api('GET','/cbd/pointages');
+  if(d.error){ $('content').innerHTML='<div class="empty">❌ '+esc(d.error)+'</div>'; return; }
+  const respo=(S.mode==='responsable');
+  const mien=(d.resume||[]).find(r=>true && !respo)||(d.resume||[])[0];
+  const fmtH=x=>x?new Date(x).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}):'—';
+  const fmtM=m=>m!=null?Math.floor(m/60)+'h'+String(m%60).padStart(2,'0'):'—';
+  if(!respo){
+    const etat=mien?mien.etat:null;
+    const suiv={null:['debut'],debut:['pause','cloture'],reprise:['pause','cloture'],pause:['reprise','cloture'],cloture:[]}[etat]||[];
+    $('content').innerHTML=`<div class="card"><h3>⏱️ Mon pointage</h3>
+      <div style="font-size:18px;font-weight:800;margin:10px 0">${etat?_PT_ETAT[etat]:'⚪ Pas encore pointé'}</div>
+      <div class="small muted">Début : ${fmtH(mien&&mien.debut)} · Pauses : ${mien?mien.pauses:0} · Temps effectif : <b>${fmtM(mien?mien.effectif_min:null)}</b></div>
+      <div style="display:flex;flex-direction:column;gap:10px;margin-top:14px;max-width:360px">
+        ${suiv.map(t=>`<button class="btn" style="padding:14px;font-size:16px" onclick="pointer('${t}')">${_PT_LBL[t]}</button>`).join('')||'<div class="empty">Journée clôturée — à demain 👋</div>'}
+      </div></div>`;
+  } else {
+    $('content').innerHTML=`<div class="card"><h3>⏱️ Pointages du jour</h3>
+      ${(d.resume||[]).length?`<div class="table-wrap"><table><thead><tr><th>Préparateur</th><th>État</th><th>Début</th><th>Clôture</th><th>Pauses</th><th>Temps effectif</th></tr></thead><tbody>
+        ${(d.resume||[]).map(r=>`<tr><td><b>${esc(r.preparateur)}</b></td><td>${_PT_ETAT[r.etat]||'—'}</td><td>${fmtH(r.debut)}</td><td>${fmtH(r.fin)}</td><td>${r.pauses}</td><td><b>${fmtM(r.effectif_min)}</b></td></tr>`).join('')}
+      </tbody></table></div>`:'<div class="empty">Aucun pointage aujourd\u2019hui.</div>'}</div>`;
+  }
+}
+async function pointer(type){
+  const r=await api('POST','/cbd/pointage',{type});
+  if(r.error){ toast('❌ '+r.error); return; }
+  toast('✅ '+_PT_LBL[type]);
+  renderPointage();
+}
+
 async function renderObjectifs(){
   $('content').innerHTML='<div class="loading">Chargement…</div>';
   const d=await api('GET','/cbd/stock-jour?date='+todayISO());
