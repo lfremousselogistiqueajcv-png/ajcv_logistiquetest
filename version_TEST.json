@@ -1,7 +1,17 @@
 {
-  "version": "2026.07.04.31",
+  "version": "2026.07.04.32",
   "app": "AJCV Logistique",
   "historique": [
+    {
+      "v": "2026.07.04.32",
+      "date": "29/07/2026",
+      "titre": "[TEST] Pointage : motif de pause + temps de pause en minutes",
+      "notes": [
+        "💬 À chaque pause, le préparateur indique le motif (déjeuner par défaut, modifiable) — visible dans la chronologie : ⏸️ 12:01 (Déjeuner).",
+        "⏲️ Le tableau responsable affiche le temps de pause total en minutes, calculé à la minute près (pause en cours comprise).",
+        "ℹ️ Une ligne SQL à exécuter sur TEST (colonne motif) + redéploiement backend test."
+      ]
+    },
     {
       "v": "2026.07.04.31",
       "date": "29/07/2026",

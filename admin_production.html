@@ -740,26 +740,28 @@ async function renderPointage(){
   const fmtH=x=>x?new Date(x).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}):'—';
   const fmtM=m=>m!=null?Math.floor(m/60)+'h'+String(m%60).padStart(2,'0'):'—';
   const _ptIco={debut:'▶️',pause:'⏸️',reprise:'▶️',cloture:'🏁'};
-  const chrono=prep=>((d.evenements||[]).filter(e=>e.preparateur===prep).map(e=>_ptIco[e.type]+' '+fmtH(e.horodatage)).join(' → '))||'—';
+  const chrono=prep=>((d.evenements||[]).filter(e=>e.preparateur===prep).map(e=>_ptIco[e.type]+' '+fmtH(e.horodatage)+(e.motif?' ('+esc(e.motif)+')':'')).join(' → '))||'—';
   if(!respo){
     const etat=mien?mien.etat:null;
     const suiv={null:['debut'],debut:['pause','cloture'],reprise:['pause','cloture'],pause:['reprise','cloture'],cloture:[]}[etat]||[];
     $('content').innerHTML=`<div class="card"><h3>⏱️ Mon pointage</h3>
       <div style="font-size:18px;font-weight:800;margin:10px 0">${etat?_PT_ETAT[etat]:'⚪ Pas encore pointé'}</div>
-      <div class="small muted">Début : ${fmtH(mien&&mien.debut)} · Pauses : ${mien?mien.pauses:0} · Temps effectif : <b>${fmtM(mien?mien.effectif_min:null)}</b></div>
+      <div class="small muted">Début : ${fmtH(mien&&mien.debut)} · Pauses : ${mien?mien.pauses:0} · Temps effectif : <b>${fmtM(mien?mien.effectif_min:null)}</b> · Pause : ${mien&&mien.pause_min!=null?mien.pause_min+' min':'—'}</div>
       <div class="small" style="margin-top:8px;padding:9px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:10px">🕐 ${mien?chrono(mien.preparateur):'Aucun pointage aujourd\u2019hui.'}</div>
       <div style="display:flex;flex-direction:column;gap:10px;margin-top:14px;max-width:360px">
         ${suiv.map(t=>`<button class="btn" style="padding:14px;font-size:16px" onclick="pointer('${t}')">${_PT_LBL[t]}</button>`).join('')||'<div class="empty">Journée clôturée — à demain 👋</div>'}
       </div></div>`;
   } else {
     $('content').innerHTML=`<div class="card"><h3>⏱️ Pointages du jour</h3>
-      ${(d.resume||[]).length?`<div class="table-wrap"><table><thead><tr><th>Préparateur</th><th>État</th><th>Début</th><th>Clôture</th><th>Pauses</th><th>Temps effectif</th><th>Chronologie</th></tr></thead><tbody>
-        ${(d.resume||[]).map(r=>`<tr><td><b>${esc(r.preparateur)}</b></td><td>${_PT_ETAT[r.etat]||'—'}</td><td>${fmtH(r.debut)}</td><td>${fmtH(r.fin)}</td><td>${r.pauses}</td><td><b>${fmtM(r.effectif_min)}</b></td><td class="small">${chrono(r.preparateur)}</td></tr>`).join('')}
+      ${(d.resume||[]).length?`<div class="table-wrap"><table><thead><tr><th>Préparateur</th><th>État</th><th>Début</th><th>Clôture</th><th>Pauses</th><th>Pause (min)</th><th>Temps effectif</th><th>Chronologie</th></tr></thead><tbody>
+        ${(d.resume||[]).map(r=>`<tr><td><b>${esc(r.preparateur)}</b></td><td>${_PT_ETAT[r.etat]||'—'}</td><td>${fmtH(r.debut)}</td><td>${fmtH(r.fin)}</td><td>${r.pauses}</td><td>${r.pause_min!=null?r.pause_min:'—'}</td><td><b>${fmtM(r.effectif_min)}</b></td><td class="small">${chrono(r.preparateur)}</td></tr>`).join('')}
       </tbody></table></div>`:'<div class="empty">Aucun pointage aujourd\u2019hui.</div>'}</div>`;
   }
 }
 async function pointer(type){
-  const r=await api('POST','/cbd/pointage',{type});
+  let motif=null;
+  if(type==='pause'){ motif=prompt('Motif de la pause ?','Déjeuner'); if(motif===null) return; }
+  const r=await api('POST','/cbd/pointage',{type,motif});
   if(r.error){ toast('❌ '+r.error); return; }
   toast('✅ '+_PT_LBL[type]);
   renderPointage();
