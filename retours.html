@@ -54,18 +54,18 @@
       <h3>📋 Mes fiches</h3>
       <div id="mes-fiches" class="muted">Chargement…</div>
     </div>
-    <div class="card">
+    <div class="card admin-only">
       <h3>📚 Catalogue articles <span class="muted" id="cat-count"></span></h3>
       <div class="muted" style="margin-bottom:10px">Import CSV (séparateur ; ou ,) — colonnes : ref_odoo · libelle · code_barre · categorie · prix_achat. Import en mise à jour : une référence existante est actualisée, jamais doublée.</div>
       <label class="lbl-file">📥 Importer un CSV<input type="file" id="csv-file" accept=".csv,text/csv" onchange="importerCSV(this)"></label>
       <span id="imp-res" class="muted" style="margin-left:10px"></span>
     </div>
-    <div class="card">
+    <div class="card admin-only">
       <h3>🔎 Recherche (libellé, référence ou douchette)</h3>
       <input class="fld" id="rech" placeholder="Scanne un code-barres ou tape un libellé…" oninput="rechDebounce()" autofocus>
       <div id="rech-res" style="margin-top:10px"></div>
     </div>
-    <div class="card">
+    <div class="card admin-only">
       <h3>👥 Qui peut déclarer un retour</h3>
       <div class="muted" style="margin-bottom:8px">Admin et Dépôt y ont accès d'office. Coche les autres comptes autorisés.</div>
       <div id="droits-liste" class="muted">Chargement…</div>
@@ -101,7 +101,13 @@ function demarrer(){
   $('login-view').style.display='none';$('app-view').style.display='';
   $('qui').textContent=S.login+' ('+S.role+')';
   fetch('version.json').then(r=>r.json()).then(v=>{$('vbadge').textContent='v'+v.version}).catch(()=>{});
-  chargerDroits();rechercher('');ajouterLigne();chargerMes();
+  const estAdmin=['Admin','Depot'].includes(S.role);
+  document.querySelectorAll('.admin-only').forEach(el=>{ el.style.display=estAdmin?'':'none'; });
+  if(estAdmin){ chargerDroits();rechercher(''); }
+  ajouterLigne();chargerMes();
+  const majClients=()=>api('GET','/retours/clients').then(d=>{const dl=$('rc-clients');if(dl&&d.clients&&d.clients.length)dl.innerHTML=d.clients.map(c=>`<option value="${esc(c)}">`).join('');else if(d&&d.error)toast('⚠️ Clients : '+d.error)}).catch(()=>{});
+  majClients();
+  const rcC=$('rc-client'); if(rcC) rcC.onfocus=majClients;
   api('GET','/retours/clients').then(d=>{const dl=$('rc-clients');if(dl&&d.clients)dl.innerHTML=d.clients.map(c=>`<option value="${esc(c)}">`).join('')}).catch(()=>{});
 }
 // ── Déclaration (panier multi-articles, photos envoyées dès la prise) ──
@@ -173,8 +179,26 @@ async function chargerMes(){
   $('mes-fiches').innerHTML=F.length?'<table><thead><tr><th>N°</th><th>Client</th><th>Article</th><th>Qté</th><th>Motif</th><th>Statut</th><th></th></tr></thead><tbody>'+
     F.map(f=>{const st=STATUTS[f.statut]||[f.statut,'#888'];
       const act=['declare','recu_depot'].includes(f.statut)?`<button class="btn" style="padding:5px 10px;font-size:12px" onclick="saisirFacture('${f.id}','${esc(f.numero)}')">💶 Facture + date</button>`:'';
-      return `<tr><td><b>${esc(f.numero)}</b></td><td>${esc(f.client_nom)}</td><td>${f.article?esc(f.article.ref_odoo)+' <span class=muted>'+esc(f.article.libelle)+'</span>':'—'}</td><td>${f.qte}</td><td>${MOTIFS[f.motif]||f.motif}</td><td><span class="pill" style="background:${st[1]}22;color:${st[1]}">${st[0]}</span></td><td>${act}</td></tr>`}).join('')+
+      return `<tr><td><b style="cursor:pointer;text-decoration:underline" onclick="ouvrirDetail('${f.id}')">${esc(f.numero)}</b></td><td>${esc(f.client_nom)}</td><td>${f.article?esc(f.article.ref_odoo)+' <span class=muted>'+esc(f.article.libelle)+'</span>':'—'}</td><td>${f.qte}</td><td>${MOTIFS[f.motif]||f.motif}</td><td><span class="pill" style="background:${st[1]}22;color:${st[1]}">${st[0]}</span></td><td>${act}</td></tr>`}).join('')+
     '</tbody></table>':'Aucune fiche.';
+}
+async function ouvrirDetail(id){
+  const d=await api('GET','/retours/'+id+'/detail');
+  if(d.error){toast('❌ '+d.error);return}
+  const f=d.fiche;const st=STATUTS[f.statut]||[f.statut,'#888'];
+  let bg=document.getElementById('retDet');if(bg)bg.remove();
+  bg=document.createElement('div');bg.id='retDet';
+  bg.style.cssText='position:fixed;inset:0;z-index:9996;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;padding:14px';
+  bg.innerHTML=`<div style="background:var(--card);border:1px solid var(--bd);border-radius:14px;max-width:600px;width:100%;max-height:85vh;overflow:auto;padding:18px;color:var(--txt)">
+    <div style="display:flex;justify-content:space-between;align-items:center"><h3 style="margin:0">${esc(f.numero)} <span class="pill" style="background:${st[1]}22;color:${st[1]}">${st[0]}</span></h3><button class="btn" style="background:#1E293B;padding:5px 12px" onclick="document.getElementById('retDet').remove()">✕</button></div>
+    <div style="margin:10px 0">${d.article?'<b>'+esc(d.article.ref_odoo)+'</b> — '+esc(d.article.libelle):'—'} · x${f.qte} · ${MOTIFS[f.motif]||f.motif}<br>
+      <span class="muted">Client : ${esc(f.client_nom)} · Commercial : ${esc(f.commercial)}${f.facture_origine?' · Fact. origine : '+esc(f.facture_origine):''}${f.facture_remplacement?' · Fact. rempl. : <b>'+esc(f.facture_remplacement)+'</b>':''}${f.date_livraison_prevue?' · Livraison prévue : '+esc(f.date_livraison_prevue):''}</span></div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">${(d.photos||[]).map(p=>`<a href="${p.url}" target="_blank" rel="noopener"><img src="${p.url}" style="width:92px;height:92px;object-fit:cover;border-radius:10px;border:1px solid var(--bd)"></a>`).join('')||'<span class="muted">Aucune photo.</span>'}</div>
+    <h3 style="font-size:14px">🕐 Historique</h3>
+    ${(d.historique||[]).map(h=>`<div class="muted" style="padding:4px 0;border-bottom:1px solid var(--bd)">${new Date(h.created_at).toLocaleString('fr-FR')} · <b style="color:var(--txt)">${(STATUTS[h.nouveau_statut]||[h.nouveau_statut])[0]}</b> par ${esc(h.user_login)}${h.commentaire?' — '+esc(h.commentaire):''}</div>`).join('')||'<span class="muted">—</span>'}
+  </div>`;
+  bg.onmousedown=e=>{if(e.target===bg)bg.remove()};
+  document.body.appendChild(bg);
 }
 async function saisirFacture(id,num){
   const fac=prompt('N° de facture de remplacement pour '+num+' :');if(fac===null||!fac.trim())return;
