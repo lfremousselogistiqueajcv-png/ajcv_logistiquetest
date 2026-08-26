@@ -55,6 +55,11 @@
       <div id="mes-fiches" class="muted">Chargement…</div>
     </div>
     <div class="card admin-only">
+      <h3>🏭 Réception dépôt <span class="muted" id="rd-count"></span></h3>
+      <div class="muted" style="margin-bottom:8px">Les produits défectueux en attente d'arrivée au dépôt. ✅ = reçu · ❌ = refusé (motif obligatoire).</div>
+      <div id="rd-liste">Chargement…</div>
+    </div>
+    <div class="card admin-only">
       <h3>📊 Reporting défectueux</h3>
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
         <input class="fld" type="date" id="rp-deb" style="max-width:160px" onchange="chargerReporting()">
@@ -118,7 +123,7 @@ function demarrer(){
   fetch('version.json').then(r=>r.json()).then(v=>{$('vbadge').textContent='v'+v.version}).catch(()=>{});
   const estAdmin=['Admin','Depot'].includes(S.role);
   document.querySelectorAll('.admin-only').forEach(el=>{ el.style.display=estAdmin?'':'none'; });
-  if(estAdmin){ chargerDroits();rechercher('');const d=new Date();$('rp-fin').value=d.toISOString().split('T')[0];d.setDate(d.getDate()-30);$('rp-deb').value=d.toISOString().split('T')[0];chargerReporting(); }
+  if(estAdmin){ chargerDroits();rechercher('');const d=new Date();$('rp-fin').value=d.toISOString().split('T')[0];d.setDate(d.getDate()-30);$('rp-deb').value=d.toISOString().split('T')[0];chargerReporting();chargerReception(); }
   ajouterLigne();chargerMes();
   const majClients=()=>api('GET','/retours/clients').then(d=>{const dl=$('rc-clients');if(dl&&d.clients&&d.clients.length)dl.innerHTML=d.clients.map(c=>`<option value="${esc(c)}">`).join('');else if(d&&d.error)toast('⚠️ Clients : '+d.error)}).catch(()=>{});
   majClients();
@@ -193,9 +198,40 @@ async function chargerMes(){
 
   $('mes-fiches').innerHTML=F.length?'<table><thead><tr><th>N°</th><th>Client</th><th>Article</th><th>Qté</th><th>Motif</th><th>Statut</th><th></th></tr></thead><tbody>'+
     F.map(f=>{const st=STATUTS[f.statut]||[f.statut,'#888'];
-      const act=['declare','recu_depot'].includes(f.statut)?`<button class="btn" style="padding:5px 10px;font-size:12px" onclick="saisirFacture('${f.id}','${esc(f.numero)}')">💶 Facture + date</button>`:'';
+      const admin=['Admin','Depot'].includes(S.role);
+      const actL=(admin&&f.statut==='remplace'&&f.recu_le)?`<button class="btn" style="padding:5px 10px;font-size:12px;background:#166534" onclick="livrerFiche('${f.id}','${esc(f.numero)}')">🚚 Livré</button> `:'';
+      const act=actL+(['declare','recu_depot'].includes(f.statut)?`<button class="btn" style="padding:5px 10px;font-size:12px" onclick="saisirFacture('${f.id}','${esc(f.numero)}')">💶 Facture + date</button>`:'');
       return `<tr><td><b style="cursor:pointer;text-decoration:underline" onclick="ouvrirDetail('${f.id}')">${esc(f.numero)}</b></td><td>${esc(f.client_nom)}</td><td>${f.article?esc(f.article.ref_odoo)+' <span class=muted>'+esc(f.article.libelle)+'</span>':'—'}</td><td>${f.qte}</td><td>${MOTIFS[f.motif]||f.motif}</td><td><span class="pill" style="background:${st[1]}22;color:${st[1]}">${st[0]}</span></td><td>${act}</td></tr>`}).join('')+
     '</tbody></table>':'Aucune fiche.';
+}
+// ── Réception dépôt ──
+async function chargerReception(){
+  const d=await api('GET','/retours/mes');
+  if(d.error){$('rd-liste').innerHTML='<span class="muted">❌ '+esc(d.error)+'</span>';return}
+  const F=(d.fiches||[]).filter(f=>!f.recu_le&&['declare','remplace'].includes(f.statut));
+  $('rd-count').textContent=F.length?'· '+F.length+' en attente':'';
+  $('rd-liste').innerHTML=F.length?'<table><thead><tr><th>N°</th><th>Client</th><th>Article</th><th>Qté</th><th>Motif</th><th>Commercial</th><th></th></tr></thead><tbody>'+
+    F.map(f=>`<tr><td><b style="cursor:pointer;text-decoration:underline" onclick="ouvrirDetail('${f.id}')">${esc(f.numero)}</b></td><td>${esc(f.client_nom)}</td><td>${f.article?esc(f.article.ref_odoo):'—'}</td><td>${f.qte}</td><td>${MOTIFS[f.motif]||f.motif}</td><td>${esc(f.commercial)}</td>
+      <td style="white-space:nowrap"><button class="btn" style="padding:5px 10px;font-size:12px;background:#166534" onclick="recevoirFiche('${f.id}','${esc(f.numero)}')">✅ Reçu</button>
+      <button class="btn" style="padding:5px 10px;font-size:12px;background:#7F1D1D;margin-left:5px" onclick="refuserFiche('${f.id}','${esc(f.numero)}')">❌ Refuser</button></td></tr>`).join('')+
+    '</tbody></table>':'<span class="muted">Rien en attente — tout est reçu. ✅</span>';
+}
+async function recevoirFiche(id,num){
+  const r=await api('PATCH','/retours/'+id+'/recevoir',{});
+  if(r.error){toast('❌ '+r.error);return}
+  toast('✅ '+num+' reçu au dépôt');chargerReception();chargerMes();chargerReporting();
+}
+async function refuserFiche(id,num){
+  const m=prompt('Motif du refus de '+num+' (obligatoire) :');
+  if(m===null)return; if(!m.trim()){toast('Motif obligatoire');return}
+  const r=await api('PATCH','/retours/'+id+'/refuser',{motif_refus:m.trim()});
+  if(r.error){toast('❌ '+r.error);return}
+  toast('❌ '+num+' refusé');chargerReception();chargerMes();chargerReporting();
+}
+async function livrerFiche(id,num){
+  const r=await api('PATCH','/retours/'+id+'/livrer',{});
+  if(r.error){toast('❌ '+r.error);return}
+  toast('🚚 '+num+' → Livré');chargerReception();chargerMes();chargerReporting();
 }
 // ── Reporting admin ──
 let _rp=[];
