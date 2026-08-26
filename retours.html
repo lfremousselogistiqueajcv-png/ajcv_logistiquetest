@@ -210,8 +210,8 @@ async function chargerReception(){
   if(d.error){$('rd-liste').innerHTML='<span class="muted">❌ '+esc(d.error)+'</span>';return}
   const F=(d.fiches||[]).filter(f=>!f.recu_le&&['declare','remplace'].includes(f.statut));
   $('rd-count').textContent=F.length?'· '+F.length+' en attente':'';
-  $('rd-liste').innerHTML=F.length?'<table><thead><tr><th>N°</th><th>Client</th><th>Article</th><th>Qté</th><th>Motif</th><th>Commercial</th><th></th></tr></thead><tbody>'+
-    F.map(f=>`<tr><td><b style="cursor:pointer;text-decoration:underline" onclick="ouvrirDetail('${f.id}')">${esc(f.numero)}</b></td><td>${esc(f.client_nom)}</td><td>${f.article?esc(f.article.ref_odoo):'—'}</td><td>${f.qte}</td><td>${MOTIFS[f.motif]||f.motif}</td><td>${esc(f.commercial)}</td>
+  $('rd-liste').innerHTML=F.length?'<table><thead><tr><th>N°</th><th>Client</th><th>Article</th><th>Qté</th><th>Motif</th><th>Factures</th><th>Commercial</th><th></th></tr></thead><tbody>'+
+    F.map(f=>`<tr><td><b style="cursor:pointer;text-decoration:underline" onclick="ouvrirDetail('${f.id}')">${esc(f.numero)}</b></td><td>${esc(f.client_nom)}</td><td>${f.article?esc(f.article.ref_odoo):'—'}</td><td>${f.qte}</td><td>${MOTIFS[f.motif]||f.motif}</td><td class="small">${f.facture_origine?'orig. '+esc(f.facture_origine):''}${f.facture_remplacement?(f.facture_origine?' · ':'')+'rempl. <b>'+esc(f.facture_remplacement)+'</b>':''}${(!f.facture_origine&&!f.facture_remplacement)?'—':''}</td><td>${esc(f.commercial)}</td>
       <td style="white-space:nowrap"><button class="btn" style="padding:5px 10px;font-size:12px;background:#166534" onclick="recevoirFiche('${f.id}','${esc(f.numero)}')">✅ Reçu</button>
       <button class="btn" style="padding:5px 10px;font-size:12px;background:#7F1D1D;margin-left:5px" onclick="refuserFiche('${f.id}','${esc(f.numero)}')">❌ Refuser</button></td></tr>`).join('')+
     '</tbody></table>':'<span class="muted">Rien en attente — tout est reçu. ✅</span>';
@@ -258,8 +258,8 @@ function renderReporting(){
     <table><thead><tr><th>Réf.</th><th>Article</th><th>Fiches</th><th>Qté déf.</th><th>Coût</th></tr></thead><tbody>
     ${A.map(a=>`<tr><td><b>${esc(a.ref)}</b></td><td>${esc(a.article)}</td><td>${a.fiches}</td><td><b>${a.qte}</b></td><td>${a.cout?a.cout.toFixed(2)+' €':'—'}</td></tr>`).join('')}</tbody></table>`:'<span class="muted">Aucune fiche sur la période.</span>';
   $('rp-detail').innerHTML=F.length?`<details><summary class="muted" style="cursor:pointer">Détail des ${F.length} fiches</summary>
-    <table style="margin-top:8px"><thead><tr><th>N°</th><th>Date</th><th>Commercial</th><th>Client</th><th>Article</th><th>Qté</th><th>Motif</th><th>Statut</th></tr></thead><tbody>
-    ${F.map(f=>`<tr><td>${esc(f.numero)}</td><td>${new Date(f.date).toLocaleDateString('fr-FR')}</td><td>${esc(f.commercial)}</td><td>${esc(f.client)}</td><td>${esc(f.ref)} <span class="muted">${esc(f.article)}</span></td><td>${f.qte}</td><td>${MOTIFS[f.motif]||f.motif}</td><td>${(STATUTS[f.statut]||[f.statut])[0]}</td></tr>`).join('')}</tbody></table></details>`:'';
+    <table style="margin-top:8px"><thead><tr><th>N°</th><th>Date</th><th>Commercial</th><th>Client</th><th>Article</th><th>Qté</th><th>Motif</th><th>Fact. orig.</th><th>Fact. rempl.</th><th>Statut</th></tr></thead><tbody>
+    ${F.map(f=>`<tr><td>${esc(f.numero)}</td><td>${new Date(f.date).toLocaleDateString('fr-FR')}</td><td>${esc(f.commercial)}</td><td>${esc(f.client)}</td><td>${esc(f.ref)} <span class="muted">${esc(f.article)}</span></td><td>${f.qte}</td><td>${MOTIFS[f.motif]||f.motif}</td><td>${esc(f.facture_origine||'—')}</td><td><b>${esc(f.facture_remplacement||'—')}</b></td><td>${(STATUTS[f.statut]||[f.statut])[0]}</td></tr>`).join('')}</tbody></table></details>`:'';
 }
 function exportReporting(){
   const F=_rpFiltre();if(!F.length){toast('Rien à exporter');return}
