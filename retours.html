@@ -41,6 +41,20 @@
   <header><h1>↩️ Retours client</h1><span class="badge-v" id="vbadge"></span><span class="muted" id="qui"></span><button class="btn" style="background:#1E293B" onclick="deconnexion()">Quitter</button></header>
   <main>
     <div class="card">
+      <h3>➕ Déclarer un retour</h3>
+      <input class="fld" id="rc-client" placeholder="Nom du client" style="margin-bottom:10px">
+      <div id="rc-lignes"></div>
+      <button class="btn" style="background:#1E293B;margin-top:6px" onclick="ajouterLigne()">+ Ajouter un article</button>
+      <div style="margin-top:12px;display:flex;gap:10px;align-items:center">
+        <button class="btn" id="rc-env" onclick="envoyerRetour()">📤 Envoyer le retour</button>
+        <span class="muted" id="rc-msg"></span>
+      </div>
+    </div>
+    <div class="card">
+      <h3>📋 Mes fiches</h3>
+      <div id="mes-fiches" class="muted">Chargement…</div>
+    </div>
+    <div class="card">
       <h3>📚 Catalogue articles <span class="muted" id="cat-count"></span></h3>
       <div class="muted" style="margin-bottom:10px">Import CSV (séparateur ; ou ,) — colonnes : ref_odoo · libelle · code_barre · categorie · prix_achat. Import en mise à jour : une référence existante est actualisée, jamais doublée.</div>
       <label class="lbl-file">📥 Importer un CSV<input type="file" id="csv-file" accept=".csv,text/csv" onchange="importerCSV(this)"></label>
@@ -74,7 +88,7 @@ async function api(method,path,body){
 async function seConnecter(){
   $('lg-msg').textContent='Connexion…';
   try{
-    const r=await fetch(API+'/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({login:$('lg-user').value.trim(),password:$('lg-pass').value})});
+    const r=await fetch(API+'/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({login:$('lg-user').value.trim(),mdp:$('lg-pass').value})});
     const d=await r.json();
     if(!d.token){$('lg-msg').textContent='❌ '+(d.error||'Identifiants invalides');return}
     S.token=d.token;S.login=d.login||$('lg-user').value.trim();S.role=d.role||'';
@@ -87,7 +101,85 @@ function demarrer(){
   $('login-view').style.display='none';$('app-view').style.display='';
   $('qui').textContent=S.login+' ('+S.role+')';
   fetch('version.json').then(r=>r.json()).then(v=>{$('vbadge').textContent='v'+v.version}).catch(()=>{});
-  chargerDroits();rechercher('');
+  chargerDroits();rechercher('');ajouterLigne();chargerMes();
+}
+// ── Déclaration (panier multi-articles, photos envoyées dès la prise) ──
+const MOTIFS={fuite:'Fuite',ne_s_allume_pas:"Ne s'allume pas",gout:'Goût',dlc:'DLC',casse:'Casse',autre:'Autre'};
+const STATUTS={declare:['Déclaré','#F59E0B'],recu_depot:['Reçu dépôt','#3B82F6'],remplace:['Remplacé','#8B5CF6'],livre:['Livré','#22C55E'],refuse:['Refusé','#EF4444']};
+let P={lignes:[]};
+function ajouterLigne(){P.lignes.push({article:null,qte:1,motif:'fuite',commentaire:'',facture_origine:'',photos:[],up:0});renderLignes()}
+function retirerLigne(i){P.lignes.splice(i,1);renderLignes()}
+function renderLignes(){
+  $('rc-lignes').innerHTML=P.lignes.map((l,i)=>`
+  <div style="border:1px solid var(--bd);border-radius:12px;padding:12px;margin-bottom:10px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><b>Article ${i+1}</b><button class="btn" style="background:#7F1D1D;padding:4px 10px" onclick="retirerLigne(${i})">✕</button></div>
+    ${l.article?`<div style="margin-bottom:8px">✅ <b>${esc(l.article.ref_odoo)}</b> — ${esc(l.article.libelle)} <button class="btn" style="background:#1E293B;padding:3px 9px;font-size:12px" onclick="P.lignes[${i}].article=null;renderLignes()">changer</button></div>`
+      :`<input class="fld" placeholder="Article : libellé, réf ou douchette…" style="margin-bottom:6px" oninput="chercherArt(${i},this.value)"><div id="art-res-${i}"></div>`}
+    <div style="display:flex;gap:8px;margin-bottom:8px">
+      <input class="fld" type="number" min="1" value="${l.qte}" style="max-width:90px" onchange="P.lignes[${i}].qte=parseInt(this.value)||1" placeholder="Qté">
+      <select class="fld" onchange="P.lignes[${i}].motif=this.value">${Object.entries(MOTIFS).map(([k,v])=>`<option value="${k}" ${l.motif===k?'selected':''}>${v}</option>`).join('')}</select>
+    </div>
+    <input class="fld" placeholder="Facture d'origine (optionnel)" value="${esc(l.facture_origine)}" style="margin-bottom:6px" onchange="P.lignes[${i}].facture_origine=this.value">
+    <input class="fld" placeholder="Commentaire (optionnel)" value="${esc(l.commentaire)}" style="margin-bottom:8px" onchange="P.lignes[${i}].commentaire=this.value">
+    <label class="lbl-file">📷 Photo du produit<input type="file" accept="image/*" capture="environment" onchange="photoRetour(${i},this)"></label>
+    <span style="margin-left:8px">${l.photos.map(()=>'<span class="pill ok" style="margin-right:4px">✓</span>').join('')}${l.up?'<span class="muted">⏳ envoi…</span>':''}</span>
+    <span class="muted" style="margin-left:6px">${l.photos.length} photo(s) en sécurité</span>
+  </div>`).join('')||'<div class="muted">Ajoute au moins un article.</div>';
+}
+let _ta=null;
+function chercherArt(i,q){clearTimeout(_ta);_ta=setTimeout(async()=>{
+  if(!q||q.length<2){$('art-res-'+i).innerHTML='';return}
+  const d=await api('GET','/retours/articles?q='+encodeURIComponent(q));
+  $('art-res-'+i).innerHTML=(d.articles||[]).slice(0,6).map(a=>`<div style="padding:7px 10px;border:1px solid var(--bd);border-radius:8px;margin-bottom:4px;cursor:pointer" onclick='choisirArt(${i},${JSON.stringify({id:a.id,ref_odoo:a.ref_odoo,libelle:a.libelle}).replace(/'/g,"&#39;")})'><b>${esc(a.ref_odoo)}</b> — ${esc(a.libelle)}</div>`).join('')||'<span class="muted">Aucun article.</span>';
+},250)}
+function choisirArt(i,a){P.lignes[i].article=a;renderLignes()}
+function compresser(file,maxDim,q){return new Promise((res,rej)=>{
+  const img=new Image();const u=URL.createObjectURL(file);
+  img.onload=()=>{const r=Math.min(1,maxDim/Math.max(img.width,img.height));
+    const c=document.createElement('canvas');c.width=Math.round(img.width*r);c.height=Math.round(img.height*r);
+    c.getContext('2d').drawImage(img,0,0,c.width,c.height);URL.revokeObjectURL(u);res(c.toDataURL('image/jpeg',q))};
+  img.onerror=()=>{URL.revokeObjectURL(u);rej(new Error('illisible'))};img.src=u})}
+async function photoRetour(i,input){
+  const f=input.files&&input.files[0];input.value='';if(!f)return;
+  P.lignes[i].up=1;renderLignes();
+  try{
+    const b64=await compresser(f,1600,0.8);
+    const r=await api('POST','/retours/photo',{photo:b64});
+    if(r.error){toast('❌ '+r.error)}else{P.lignes[i].photos.push(r.path)}
+  }catch(e){toast('❌ Photo illisible ou réseau')}
+  P.lignes[i].up=0;renderLignes();
+}
+async function envoyerRetour(){
+  const client=$('rc-client').value.trim();
+  if(!client){toast('Nom du client requis');return}
+  if(!P.lignes.length){toast('Ajoute au moins un article');return}
+  for(const l of P.lignes){
+    if(!l.article){toast('Un article n\u2019est pas choisi');return}
+    if(!l.photos.length){toast('Au moins une photo par article');return}
+  }
+  const b=$('rc-env');b.disabled=true;$('rc-msg').textContent='Envoi…';
+  const r=await api('POST','/retours',{client_nom:client,lignes:P.lignes.map(l=>({article_id:l.article.id,qte:l.qte,motif:l.motif,commentaire:l.commentaire,facture_origine:l.facture_origine,photos:l.photos}))});
+  b.disabled=false;
+  if(r.error){$('rc-msg').textContent='❌ '+r.error;return}
+  $('rc-msg').textContent='';toast('✅ '+r.numeros.join(', ')+' créé(s)');
+  P={lignes:[]};$('rc-client').value='';renderLignes();chargerMes();
+}
+async function chargerMes(){
+  const d=await api('GET','/retours/mes');
+  if(d.error){$('mes-fiches').textContent='❌ '+d.error;return}
+  const F=d.fiches||[];
+  $('mes-fiches').innerHTML=F.length?'<table><thead><tr><th>N°</th><th>Client</th><th>Article</th><th>Qté</th><th>Motif</th><th>Statut</th><th></th></tr></thead><tbody>'+
+    F.map(f=>{const st=STATUTS[f.statut]||[f.statut,'#888'];
+      const act=['declare','recu_depot'].includes(f.statut)?`<button class="btn" style="padding:5px 10px;font-size:12px" onclick="saisirFacture('${f.id}','${esc(f.numero)}')">💶 Facture + date</button>`:'';
+      return `<tr><td><b>${esc(f.numero)}</b></td><td>${esc(f.client_nom)}</td><td>${f.article?esc(f.article.ref_odoo)+' <span class=muted>'+esc(f.article.libelle)+'</span>':'—'}</td><td>${f.qte}</td><td>${MOTIFS[f.motif]||f.motif}</td><td><span class="pill" style="background:${st[1]}22;color:${st[1]}">${st[0]}</span></td><td>${act}</td></tr>`}).join('')+
+    '</tbody></table>':'Aucune fiche.';
+}
+async function saisirFacture(id,num){
+  const fac=prompt('N° de facture de remplacement pour '+num+' :');if(fac===null||!fac.trim())return;
+  const dt=prompt('Date de livraison prévue (AAAA-MM-JJ) :',new Date().toISOString().split('T')[0]);if(dt===null||!dt.trim())return;
+  const r=await api('PATCH','/retours/'+id+'/facture',{facture_remplacement:fac.trim(),date_livraison_prevue:dt.trim()});
+  if(r.error){toast('❌ '+r.error);return}
+  toast('✅ '+num+' → Remplacé');chargerMes();
 }
 // ── Import CSV ──
 function importerCSV(input){
