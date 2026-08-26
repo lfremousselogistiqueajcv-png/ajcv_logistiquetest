@@ -182,6 +182,38 @@ async function chargerMes(){
       return `<tr><td><b style="cursor:pointer;text-decoration:underline" onclick="ouvrirDetail('${f.id}')">${esc(f.numero)}</b></td><td>${esc(f.client_nom)}</td><td>${f.article?esc(f.article.ref_odoo)+' <span class=muted>'+esc(f.article.libelle)+'</span>':'—'}</td><td>${f.qte}</td><td>${MOTIFS[f.motif]||f.motif}</td><td><span class="pill" style="background:${st[1]}22;color:${st[1]}">${st[0]}</span></td><td>${act}</td></tr>`}).join('')+
     '</tbody></table>':'Aucune fiche.';
 }
+// ── Visionneuse photos plein écran (fleches / swipe / fermer) ──
+let _vp={urls:[],i:0};
+function voirPhotos(urls,i){
+  _vp={urls:urls,i:i||0};
+  let bg=document.getElementById('visPh');if(bg)bg.remove();
+  bg=document.createElement('div');bg.id='visPh';
+  bg.style.cssText='position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,.93);display:flex;align-items:center;justify-content:center';
+  bg.innerHTML=`
+    <img id="visImg" style="max-width:94vw;max-height:88vh;border-radius:10px;box-shadow:0 10px 40px rgba(0,0,0,.6)">
+    <button onclick="fermerVis()" style="position:fixed;top:14px;right:14px;width:44px;height:44px;border-radius:50%;border:none;background:rgba(255,255,255,.14);color:#fff;font-size:20px;cursor:pointer">✕</button>
+    <button id="visPrev" onclick="navVis(-1)" style="position:fixed;left:10px;top:50%;transform:translateY(-50%);width:46px;height:46px;border-radius:50%;border:none;background:rgba(255,255,255,.14);color:#fff;font-size:22px;cursor:pointer">‹</button>
+    <button id="visNext" onclick="navVis(1)" style="position:fixed;right:10px;top:50%;transform:translateY(-50%);width:46px;height:46px;border-radius:50%;border:none;background:rgba(255,255,255,.14);color:#fff;font-size:22px;cursor:pointer">›</button>
+    <div id="visCpt" style="position:fixed;bottom:16px;left:50%;transform:translateX(-50%);color:#fff;font-size:13px;background:rgba(255,255,255,.12);padding:4px 12px;border-radius:99px"></div>`;
+  bg.onmousedown=e=>{if(e.target===bg)fermerVis()};
+  let tx=null;
+  bg.addEventListener('touchstart',e=>{tx=e.touches[0].clientX},{passive:true});
+  bg.addEventListener('touchend',e=>{if(tx==null)return;const dx=e.changedTouches[0].clientX-tx;if(Math.abs(dx)>45)navVis(dx<0?1:-1);tx=null},{passive:true});
+  document.addEventListener('keydown',visClavier);
+  document.body.appendChild(bg);
+  majVis();
+}
+function visClavier(e){if(e.key==='Escape')fermerVis();if(e.key==='ArrowLeft')navVis(-1);if(e.key==='ArrowRight')navVis(1)}
+function navVis(d){const n=_vp.urls.length;if(!n)return;_vp.i=(_vp.i+d+n)%n;majVis()}
+function majVis(){
+  const img=document.getElementById('visImg');if(!img)return;
+  img.src=_vp.urls[_vp.i];
+  document.getElementById('visCpt').textContent=(_vp.i+1)+' / '+_vp.urls.length;
+  const un=_vp.urls.length<2;
+  document.getElementById('visPrev').style.display=un?'none':'';
+  document.getElementById('visNext').style.display=un?'none':'';
+}
+function fermerVis(){const b=document.getElementById('visPh');if(b)b.remove();document.removeEventListener('keydown',visClavier)}
 async function ouvrirDetail(id){
   const d=await api('GET','/retours/'+id+'/detail');
   if(d.error){toast('❌ '+d.error);return}
@@ -193,7 +225,7 @@ async function ouvrirDetail(id){
     <div style="display:flex;justify-content:space-between;align-items:center"><h3 style="margin:0">${esc(f.numero)} <span class="pill" style="background:${st[1]}22;color:${st[1]}">${st[0]}</span></h3><button class="btn" style="background:#1E293B;padding:5px 12px" onclick="document.getElementById('retDet').remove()">✕</button></div>
     <div style="margin:10px 0">${d.article?'<b>'+esc(d.article.ref_odoo)+'</b> — '+esc(d.article.libelle):'—'} · x${f.qte} · ${MOTIFS[f.motif]||f.motif}<br>
       <span class="muted">Client : ${esc(f.client_nom)} · Commercial : ${esc(f.commercial)}${f.facture_origine?' · Fact. origine : '+esc(f.facture_origine):''}${f.facture_remplacement?' · Fact. rempl. : <b>'+esc(f.facture_remplacement)+'</b>':''}${f.date_livraison_prevue?' · Livraison prévue : '+esc(f.date_livraison_prevue):''}</span></div>
-    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">${(d.photos||[]).map(p=>`<a href="${p.url}" target="_blank" rel="noopener"><img src="${p.url}" style="width:92px;height:92px;object-fit:cover;border-radius:10px;border:1px solid var(--bd)"></a>`).join('')||'<span class="muted">Aucune photo.</span>'}</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">${(d.photos||[]).map((p,ix)=>`<img src="${p.url}" onclick='voirPhotos(${JSON.stringify((d.photos||[]).map(x=>x.url)).replace(/'/g,"&#39;")},${ix})' style="width:92px;height:92px;object-fit:cover;border-radius:10px;border:1px solid var(--bd);cursor:pointer">`).join('')||'<span class="muted">Aucune photo.</span>'}</div>
     <h3 style="font-size:14px">🕐 Historique</h3>
     ${(d.historique||[]).map(h=>`<div class="muted" style="padding:4px 0;border-bottom:1px solid var(--bd)">${new Date(h.created_at).toLocaleString('fr-FR')} · <b style="color:var(--txt)">${(STATUTS[h.nouveau_statut]||[h.nouveau_statut])[0]}</b> par ${esc(h.user_login)}${h.commentaire?' — '+esc(h.commentaire):''}</div>`).join('')||'<span class="muted">—</span>'}
   </div>`;
