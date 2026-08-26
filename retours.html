@@ -55,6 +55,21 @@
       <div id="mes-fiches" class="muted">Chargement…</div>
     </div>
     <div class="card admin-only">
+      <h3>📊 Reporting défectueux</h3>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
+        <input class="fld" type="date" id="rp-deb" style="max-width:160px" onchange="chargerReporting()">
+        <input class="fld" type="date" id="rp-fin" style="max-width:160px" onchange="chargerReporting()">
+        <select class="fld" id="rp-st" style="max-width:170px" onchange="chargerReporting()">
+          <option value="">Tous statuts</option><option value="declare">Déclaré</option><option value="recu_depot">Reçu dépôt</option>
+          <option value="remplace">Remplacé</option><option value="livre">Livré</option><option value="refuse">Refusé</option>
+        </select>
+        <input class="fld" id="rp-q" placeholder="Filtrer article / client / commercial…" style="flex:1;min-width:180px" oninput="renderReporting()">
+        <button class="btn" style="background:#1E293B" onclick="exportReporting()">⬇️ CSV</button>
+      </div>
+      <div id="rp-synthese"></div>
+      <div id="rp-detail" style="margin-top:12px"></div>
+    </div>
+    <div class="card admin-only">
       <h3>📚 Catalogue articles <span class="muted" id="cat-count"></span></h3>
       <div class="muted" style="margin-bottom:10px">Import CSV (séparateur ; ou ,) — colonnes : ref_odoo · libelle · code_barre · categorie · prix_achat. Import en mise à jour : une référence existante est actualisée, jamais doublée.</div>
       <label class="lbl-file">📥 Importer un CSV<input type="file" id="csv-file" accept=".csv,text/csv" onchange="importerCSV(this)"></label>
@@ -103,7 +118,7 @@ function demarrer(){
   fetch('version.json').then(r=>r.json()).then(v=>{$('vbadge').textContent='v'+v.version}).catch(()=>{});
   const estAdmin=['Admin','Depot'].includes(S.role);
   document.querySelectorAll('.admin-only').forEach(el=>{ el.style.display=estAdmin?'':'none'; });
-  if(estAdmin){ chargerDroits();rechercher(''); }
+  if(estAdmin){ chargerDroits();rechercher('');const d=new Date();$('rp-fin').value=d.toISOString().split('T')[0];d.setDate(d.getDate()-30);$('rp-deb').value=d.toISOString().split('T')[0];chargerReporting(); }
   ajouterLigne();chargerMes();
   const majClients=()=>api('GET','/retours/clients').then(d=>{const dl=$('rc-clients');if(dl&&d.clients&&d.clients.length)dl.innerHTML=d.clients.map(c=>`<option value="${esc(c)}">`).join('');else if(d&&d.error)toast('⚠️ Clients : '+d.error)}).catch(()=>{});
   majClients();
@@ -181,6 +196,43 @@ async function chargerMes(){
       const act=['declare','recu_depot'].includes(f.statut)?`<button class="btn" style="padding:5px 10px;font-size:12px" onclick="saisirFacture('${f.id}','${esc(f.numero)}')">💶 Facture + date</button>`:'';
       return `<tr><td><b style="cursor:pointer;text-decoration:underline" onclick="ouvrirDetail('${f.id}')">${esc(f.numero)}</b></td><td>${esc(f.client_nom)}</td><td>${f.article?esc(f.article.ref_odoo)+' <span class=muted>'+esc(f.article.libelle)+'</span>':'—'}</td><td>${f.qte}</td><td>${MOTIFS[f.motif]||f.motif}</td><td><span class="pill" style="background:${st[1]}22;color:${st[1]}">${st[0]}</span></td><td>${act}</td></tr>`}).join('')+
     '</tbody></table>':'Aucune fiche.';
+}
+// ── Reporting admin ──
+let _rp=[];
+async function chargerReporting(){
+  const p=new URLSearchParams();
+  if($('rp-deb').value)p.set('debut',$('rp-deb').value);
+  if($('rp-fin').value)p.set('fin',$('rp-fin').value);
+  if($('rp-st').value)p.set('statut',$('rp-st').value);
+  const d=await api('GET','/retours/reporting?'+p.toString());
+  if(d.error){$('rp-synthese').innerHTML='<span class="muted">❌ '+esc(d.error)+'</span>';return}
+  _rp=d.fiches||[];renderReporting();
+}
+function _rpFiltre(){
+  const q=($('rp-q').value||'').toLowerCase();
+  return q?_rp.filter(f=>[f.article,f.ref,f.client,f.commercial].join(' ').toLowerCase().includes(q)):_rp;
+}
+function renderReporting(){
+  const F=_rpFiltre();
+  const agg={};let qT=0,cT=0;
+  F.forEach(f=>{const k=f.ref||f.article;agg[k]=agg[k]||{ref:f.ref,article:f.article,fiches:0,qte:0,cout:0};
+    agg[k].fiches++;agg[k].qte+=f.qte;qT+=f.qte;if(f.cout!=null){agg[k].cout+=f.cout;cT+=f.cout}});
+  const A=Object.values(agg).sort((a,b)=>b.qte-a.qte);
+  $('rp-synthese').innerHTML=A.length?`<div class="muted" style="margin-bottom:6px"><b style="color:var(--txt)">${F.length}</b> fiche(s) · <b style="color:var(--txt)">${qT}</b> produit(s) défectueux · coût gestes : <b style="color:var(--txt)">${cT.toFixed(2)} €</b></div>
+    <table><thead><tr><th>Réf.</th><th>Article</th><th>Fiches</th><th>Qté déf.</th><th>Coût</th></tr></thead><tbody>
+    ${A.map(a=>`<tr><td><b>${esc(a.ref)}</b></td><td>${esc(a.article)}</td><td>${a.fiches}</td><td><b>${a.qte}</b></td><td>${a.cout?a.cout.toFixed(2)+' €':'—'}</td></tr>`).join('')}</tbody></table>`:'<span class="muted">Aucune fiche sur la période.</span>';
+  $('rp-detail').innerHTML=F.length?`<details><summary class="muted" style="cursor:pointer">Détail des ${F.length} fiches</summary>
+    <table style="margin-top:8px"><thead><tr><th>N°</th><th>Date</th><th>Commercial</th><th>Client</th><th>Article</th><th>Qté</th><th>Motif</th><th>Statut</th></tr></thead><tbody>
+    ${F.map(f=>`<tr><td>${esc(f.numero)}</td><td>${new Date(f.date).toLocaleDateString('fr-FR')}</td><td>${esc(f.commercial)}</td><td>${esc(f.client)}</td><td>${esc(f.ref)} <span class="muted">${esc(f.article)}</span></td><td>${f.qte}</td><td>${MOTIFS[f.motif]||f.motif}</td><td>${(STATUTS[f.statut]||[f.statut])[0]}</td></tr>`).join('')}</tbody></table></details>`:'';
+}
+function exportReporting(){
+  const F=_rpFiltre();if(!F.length){toast('Rien à exporter');return}
+  const cols=['numero','date','commercial','client','ref','article','qte','motif','statut','facture_origine','facture_remplacement','cout'];
+  const cell=v=>{if(v==null)return'';const s=String(v).replace(/"/g,'""');return /[;"\n]/.test(s)?'"'+s+'"':s};
+  const csv='\ufeff'+cols.join(';')+'\n'+F.map(f=>cols.map(c=>cell(f[c])).join(';')).join('\n');
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));
+  a.download='retours_defectueux_'+new Date().toISOString().split('T')[0]+'.csv';a.click();URL.revokeObjectURL(a.href);
+  toast('⬇️ Export : '+F.length+' fiches');
 }
 // ── Visionneuse photos plein écran (fleches / swipe / fermer) ──
 let _vp={urls:[],i:0};
