@@ -42,7 +42,7 @@
   <main>
     <div class="card">
       <h3>➕ Déclarer un retour</h3>
-      <input class="fld" id="rc-client" placeholder="Nom du client" style="margin-bottom:10px">
+      <input class="fld" id="rc-client" placeholder="Nom du client" list="rc-clients" style="margin-bottom:10px"><datalist id="rc-clients"></datalist>
       <div id="rc-lignes"></div>
       <button class="btn" style="background:#1E293B;margin-top:6px" onclick="ajouterLigne()">+ Ajouter un article</button>
       <div style="margin-top:12px;display:flex;gap:10px;align-items:center">
@@ -168,6 +168,7 @@ async function chargerMes(){
   const d=await api('GET','/retours/mes');
   if(d.error){$('mes-fiches').textContent='❌ '+d.error;return}
   const F=d.fiches||[];
+  const dl=$('rc-clients'); if(dl) dl.innerHTML=[...new Set(F.map(f=>f.client_nom))].map(c=>`<option value="${esc(c)}">`).join('');
   $('mes-fiches').innerHTML=F.length?'<table><thead><tr><th>N°</th><th>Client</th><th>Article</th><th>Qté</th><th>Motif</th><th>Statut</th><th></th></tr></thead><tbody>'+
     F.map(f=>{const st=STATUTS[f.statut]||[f.statut,'#888'];
       const act=['declare','recu_depot'].includes(f.statut)?`<button class="btn" style="padding:5px 10px;font-size:12px" onclick="saisirFacture('${f.id}','${esc(f.numero)}')">💶 Facture + date</button>`:'';
