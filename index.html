@@ -1,94 +1,94 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>AJCV Logistique — TEST</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AJCV — Logistique & Production</title>
 <style>
-  :root{--gold:#FFB300;--bg:#0F1724;--surface:#1A2332;--border:rgba(255,255,255,.1);--text:#F0F4FF;--text2:#8B9EC7}
-  *{box-sizing:border-box;margin:0;padding:0}
-  body{background:var(--bg);color:var(--text);font-family:Arial,sans-serif;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px}
-  #test-banner{position:fixed;top:0;left:0;right:0;z-index:9999;background:#A855F7;color:#fff;font:600 13px/1.4 Arial,sans-serif;text-align:center;padding:6px 10px;box-shadow:0 2px 8px rgba(0,0,0,.35)}
-  .logo{width:72px;height:72px;background:var(--gold);border-radius:18px;display:flex;align-items:center;justify-content:center;font-size:38px;margin-bottom:16px;box-shadow:0 4px 20px rgba(255,179,0,.3)}
-  h1{font-size:22px;font-weight:700;color:var(--gold);margin-bottom:4px;text-align:center}
-  p{font-size:13px;color:var(--text2);margin-bottom:36px;text-align:center}
-  .apps{display:flex;flex-direction:column;gap:14px;width:100%;max-width:360px}
-  .app-btn{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:18px 22px;display:flex;align-items:center;gap:16px;text-decoration:none;color:var(--text);transition:all .2s}
-  .app-btn:active{opacity:.85;transform:scale(.98)}
-  .app-btn.livreur{border-left:4px solid #4CAF50}
-  .app-btn.carte{border-left:4px solid #64B5F6}
-  .app-btn.admin{border-left:4px solid #EF4444}
-  .app-btn.preparateur{border-left:4px solid #F97316}
-  .app-btn.cbd{border-left:4px solid #22C55E}
-  .app-btn.commercial{border-left:4px solid var(--gold)}
-  .app-icon{width:48px;height:48px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:26px;flex-shrink:0}
-  .icon-livreur{background:rgba(76,175,80,.15)}
-  .icon-carte{background:rgba(100,181,246,.15)}
-  .icon-admin{background:rgba(239,68,68,.15)}
-  .icon-preparateur{background:rgba(249,115,22,.15)}
-  .icon-cbd{background:rgba(34,197,94,.15)}
-  .icon-commercial{background:rgba(255,179,0,.15)}
-  .app-info h2{font-size:15px;font-weight:700;margin-bottom:3px}
-  .app-info p{font-size:12px;color:var(--text2);margin:0}
-  .sep{width:100%;max-width:360px;display:flex;align-items:center;gap:10px;color:var(--text2);font-size:11px;text-transform:uppercase;letter-spacing:.5px;margin:6px 0}
-  .sep::before,.sep::after{content:"";flex:1;height:1px;background:var(--border)}
-  .version{font-size:11px;color:var(--text2);margin-top:32px;opacity:.5;text-align:center}
-/* MODE CLAIR (accessibilite haute lisibilite) */
-html[data-theme="light"]{
-  --bg:#EDF1F7; --surface:#FFFFFF; --surface2:#EBEFF5; --surface3:#DCE2EC;
-  --text:#0F172A; --text2:#475569; --text3:#64748B;
-  --border:rgba(15,23,42,0.14);
-}
-#theme-btn{position:fixed;bottom:20px;left:20px;z-index:10001;width:46px;height:46px;border-radius:50%;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:21px;box-shadow:0 4px 16px rgba(0,0,0,.3);display:flex;align-items:center;justify-content:center;cursor:pointer}
-#theme-btn:active{transform:scale(.94)}
+  :root{
+    --bg1:#0B1120; --bg2:#101B33; --card:rgba(255,255,255,.045);
+    --border:rgba(255,255,255,.09); --txt:#EDF2FB; --mut:#93A5C9;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0;min-height:100vh;color:var(--txt);
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+    background:
+      radial-gradient(1100px 500px at 85% -10%, rgba(59,130,246,.16), transparent 60%),
+      radial-gradient(900px 500px at -10% 110%, rgba(16,185,129,.13), transparent 60%),
+      linear-gradient(160deg, var(--bg1), var(--bg2));
+    display:flex;align-items:center;justify-content:center;padding:34px 18px;
+  }
+  .wrap{max-width:880px;width:100%}
+  header{text-align:center;margin-bottom:34px;animation:pop .5s ease both}
+  .logo{
+    width:64px;height:64px;margin:0 auto 14px;border-radius:18px;display:flex;align-items:center;justify-content:center;
+    font-size:32px;background:linear-gradient(135deg,#3B82F6 0%,#10B981 100%);
+    box-shadow:0 10px 30px rgba(59,130,246,.35);
+  }
+  h1{font-size:26px;margin:0;letter-spacing:.3px}
+  h1 b{background:linear-gradient(90deg,#7CB2FF,#4ADE80);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .sub{color:var(--mut);font-size:13.5px;margin-top:6px}
+  .sect{color:var(--mut);font-size:11.5px;letter-spacing:2.2px;text-transform:uppercase;margin:26px 4px 12px;font-weight:700}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(196px,1fr));gap:14px}
+  a.tile{
+    position:relative;display:block;padding:20px 18px 18px;border-radius:16px;text-decoration:none;color:var(--txt);
+    background:var(--card);border:1px solid var(--border);backdrop-filter:blur(8px);
+    transition:transform .18s ease, border-color .18s ease, box-shadow .18s ease;
+    animation:pop .5s ease both;overflow:hidden;
+  }
+  a.tile::before{
+    content:'';position:absolute;inset:0 0 auto 0;height:3px;border-radius:16px 16px 0 0;
+    background:var(--acc,linear-gradient(90deg,#3B82F6,#60A5FA));opacity:.85;
+  }
+  a.tile:hover{transform:translateY(-4px);border-color:rgba(255,255,255,.22);box-shadow:0 14px 34px rgba(0,0,0,.35)}
+  .ico{
+    width:46px;height:46px;border-radius:13px;display:flex;align-items:center;justify-content:center;
+    font-size:24px;margin-bottom:12px;background:rgba(255,255,255,.06);border:1px solid var(--border);
+  }
+  .nom{font-weight:700;font-size:15.5px}
+  .desc{color:var(--mut);font-size:12.5px;margin-top:4px;line-height:1.45}
+  .t-admin{--acc:linear-gradient(90deg,#3B82F6,#60A5FA)}
+  .t-livreur{--acc:linear-gradient(90deg,#F59E0B,#FBBF24)}
+  .t-prep{--acc:linear-gradient(90deg,#8B5CF6,#A78BFA)}
+  .t-carte{--acc:linear-gradient(90deg,#06B6D4,#22D3EE)}
+  .t-cbd{--acc:linear-gradient(90deg,#10B981,#34D399)}
+  .t-cbdp{--acc:linear-gradient(90deg,#84CC16,#A3E635)}
+  .t-com{--acc:linear-gradient(90deg,#EC4899,#F472B6)}
+  footer{text-align:center;color:var(--mut);font-size:12px;margin-top:34px;opacity:.8}
+  @keyframes pop{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+  .grid a:nth-child(2){animation-delay:.05s}.grid a:nth-child(3){animation-delay:.1s}.grid a:nth-child(4){animation-delay:.15s}
+  @media(max-width:460px){ .grid{grid-template-columns:1fr 1fr} a.tile{padding:16px 14px} .ico{width:40px;height:40px;font-size:21px} }
 </style>
-<script>try{var _t=localStorage.getItem('ajcv_theme')||((window.matchMedia&&matchMedia('(prefers-color-scheme: light)').matches)?'light':'dark');document.documentElement.setAttribute('data-theme',_t);}catch(e){}</script>
 </head>
 <body>
-<button id="theme-btn" title="Mode clair / sombre (accessibilite)" aria-label="Basculer le mode clair ou sombre">☀️</button>
+  <div class="wrap">
+    <header>
+      <div class="logo">🚚</div>
+      <h1>AJCV — <b>Logistique &amp; Production</b></h1>
+      <div class="sub">Saint-Denis · La Réunion — <span id="jour"></span></div>
+    </header>
 
-  <div id="test-banner">🧪 ENVIRONNEMENT DE TEST — données fictives, sans impact prod</div>
-  <div class="logo">🚚</div>
-  <h1>AJCV Logistique</h1>
-  <p>La Réunion — 974 · environnement de test</p>
-  <div class="apps">
-    <a class="app-btn livreur" href="livreur_final.html" target="_blank">
-      <div class="app-icon icon-livreur">📦</div>
-      <div class="app-info"><h2>Appli Livreur</h2><p>Tournées · Livraisons · Signatures</p></div>
-    </a>
-    <a class="app-btn preparateur" href="preparateur.html" target="_blank">
-      <div class="app-icon icon-preparateur">🧰</div>
-      <div class="app-info"><h2>Appli Préparateur</h2><p>Préparation · Photos · Validation</p></div>
-    </a>
-    <a class="app-btn carte" href="carte_livraisons_AJCV_v4.html" target="_blank">
-      <div class="app-icon icon-carte">🗺️</div>
-      <div class="app-info"><h2>Carte Livraisons</h2><p>Suivi temps réel · Vue géographique</p></div>
-    </a>
-    <a class="app-btn commercial" href="AJCV_Formulaire_Commercial.html" target="_blank">
-      <div class="app-icon icon-commercial">📋</div>
-      <div class="app-info"><h2>Fiches Clients</h2><p>Création · Modification clients</p></div>
-    </a>
-    <a class="app-btn admin" href="AJCV_Admin.html" target="_blank">
-      <div class="app-icon icon-admin">⚙️</div>
-      <div class="app-info"><h2>Administration</h2><p>Livraisons · Clients · KPI</p></div>
-    </a>
+    <div class="sect">Logistique</div>
+    <div class="grid">
+      <a class="tile t-admin" href="AJCV_Admin.html"><div class="ico">🗂️</div><div class="nom">Administration</div><div class="desc">Livraisons · Plan de tournée · KPI · Rotation des zones</div></a>
+      <a class="tile t-livreur" href="livreur_final.html"><div class="ico">🚚</div><div class="nom">Livreur</div><div class="desc">Tournées, livraisons &amp; encaissements</div></a>
+      <a class="tile t-prep" href="preparateur.html"><div class="ico">📦</div><div class="nom">Préparateur</div><div class="desc">Préparations, colis &amp; photos sécurisées</div></a>
+      <a class="tile t-carte" href="carte_livraisons_AJCV_v4.html"><div class="ico">🗺️</div><div class="nom">Carte</div><div class="desc">Les livraisons du jour sur la carte</div></a>
+      <a class="tile t-com" href="retours.html"><div class="ico">↩️</div><div class="nom">Retours client</div><div class="desc">Produits défectueux &amp; remplacements</div></a>
+    </div>
 
-    <div class="sep">🌿 Production CBD</div>
+    <div class="sect">Production CBD</div>
+    <div class="grid">
+      <a class="tile t-cbd" href="admin_production.html"><div class="ico">🌿</div><div class="nom">Console Production</div><div class="desc">Ventes · Stock · Traçabilité · Pointages · Dashboard</div></a>
+      <a class="tile t-cbdp" href="preparateur_cbd.html"><div class="ico">🎯</div><div class="nom">Préparateur CBD</div><div class="desc">À produire · Saisie · Pointage du temps</div></a>
+    </div>
 
-    <a class="app-btn cbd" href="admin_production.html" target="_blank">
-      <div class="app-icon icon-cbd">🌿</div>
-      <div class="app-info"><h2>Admin Production CBD</h2><p>Stock · Ateliers · Production · Dashboard</p></div>
-    </a>
-    <a class="app-btn cbd" href="preparateur_cbd.html" target="_blank">
-      <div class="app-icon icon-cbd">🌱</div>
-      <div class="app-info"><h2>Préparateur CBD</h2><p>Saisie production · Lecture stock</p></div>
-    </a>
+    <footer>AJCV SARL — plateforme interne</footer>
   </div>
-  <div class="version">AJCV Logistique La Réunion — TEST · Supabase</div>
 <script>
-(function(){function ap(t){document.documentElement.setAttribute('data-theme',t);var b=document.getElementById('theme-btn');if(b)b.textContent=(t==='light'?'🌙':'☀️');}
-function tg(){var c=document.documentElement.getAttribute('data-theme')==='light'?'light':'dark';var n=c==='light'?'dark':'light';try{localStorage.setItem('ajcv_theme',n);}catch(_){}ap(n);}
-ap(document.documentElement.getAttribute('data-theme')||'dark');var b=document.getElementById('theme-btn');if(b)b.onclick=tg;})();
+  const d=new Date();
+  document.getElementById('jour').textContent=d.toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'});
 </script>
 </body>
 </html>
