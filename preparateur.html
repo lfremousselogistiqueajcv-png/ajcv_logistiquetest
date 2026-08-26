@@ -199,14 +199,14 @@ html[data-theme="light"]{
 <div id="toast"></div>
 
 <script>
-const CFG = { API_URL: 'https://ajcvbackend-production.up.railway.app' };
+const CFG = { API_URL: 'https://ajcvbackend-test-production.up.railway.app' };
 const VERSION_URL = 'version.json';
-const state = { token:'', prenom:'', login:'', role:'', tokenExpiry:0, orders:[], photos:{}, search:'', _date:'', volet:'apreparer', boissonsRef:[], _boId:null };
+const state = { token:'', prenom:'', login:'', role:'', tokenExpiry:0, orders:[], photos:{}, sync:{}, _upQ:{}, search:'', _date:'', volet:'apreparer', boissonsRef:[], _boId:null };
 // ── Persistance des photos (survit au rechargement Android pendant la prise) ──
 const _PHK='ajcvprep_photos_v1';
 function persisterPhotos(){
   try{
-    localStorage.setItem(_PHK, JSON.stringify({ d: new Date().toISOString().split('T')[0], p: state.photos||{} }));
+    localStorage.setItem(_PHK, JSON.stringify({ d: new Date().toISOString().split('T')[0], p: state.photos||{}, s: state.sync||{} }));
   }catch(_){ /* quota plein : on continue en mémoire */ }
 }
 function restaurerPhotos(){
@@ -215,6 +215,7 @@ function restaurerPhotos(){
     const o=JSON.parse(raw);
     if(!o || o.d!==new Date().toISOString().split('T')[0]){ localStorage.removeItem(_PHK); return; }
     if(o.p && typeof o.p==='object') state.photos=o.p;
+    if(o.s && typeof o.s==='object') state.sync=o.s;
   }catch(_){}
 }
 restaurerPhotos();
@@ -444,19 +445,41 @@ async function photoChoisie(id,input){
   const files=input.files; if(!files||!files.length) return;
   if(!Array.isArray(state.photos[id])) state.photos[id]=[];
   for(const f of files){
-    try{ const b64=await compresserPhoto(f,1200,0.7); state.photos[id].push(b64); persisterPhotos(); }
+    try{ const b64=await compresserPhoto(f,1000,0.62); state.photos[id].push(b64); persisterPhotos(); }
     catch(e){ showToast('❌ Une photo illisible','error'); }
   }
   input.value='';
   renderThumbs(id);
+  lancerUploadImmediat(id);
+}
+// Sécurisation : chaque photo part au serveur dès la prise (file séquentielle par livraison).
+function lancerUploadImmediat(id){
+  state._upQ[id] = (state._upQ[id]||Promise.resolve()).then(()=>envoyerProchaine(id)).catch(()=>{});
+}
+async function envoyerProchaine(id){
+  const arr=Array.isArray(state.photos[id])?state.photos[id]:[];
+  const n=(state.sync[id]||0);
+  if(n>=arr.length) return;
+  try{
+    const resp=await fetch(`${CFG.API_URL}/livraisons/preparation-modif`,{method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+state.token},
+      body:JSON.stringify({ id, photos:[arr[n]] })});
+    if(resp.ok){ const r=await resp.json().catch(()=>({})); if(r.success){ state.photos[id][n]='SYNC'; state.sync[id]=n+1; persisterPhotos(); renderThumbs(id); return envoyerProchaine(id); } }
+  }catch(_){ }
 }
 function renderThumbs(id){
   const wrap=document.getElementById('thumbs-'+id); if(!wrap) return;
   const arr=Array.isArray(state.photos[id])?state.photos[id]:[];
-  wrap.innerHTML=arr.map((b,i)=>`<div class="thumb-item"><img src="${b}" onclick="agrandir('${b.replace(/'/g,'%27')}')" alt=""><button class="thumb-x" onclick="supprimerPhoto('${id}',${i})">✕</button></div>`).join('')
-    +(arr.length?`<span class="thumb-count">${arr.length} photo${arr.length>1?'s':''}</span>`:'');
+  const syncN=Math.min((state.sync&&state.sync[id])||0,arr.length);
+  wrap.innerHTML=arr.map((b,i)=>{
+    if(i<syncN || b==='SYNC') return `<div class="thumb-item" style="display:flex;align-items:center;justify-content:center;background:#DCFCE7;border:1px solid #86EFAC;color:#15803D;font-size:22px" title="Photo en sécurité au serveur">✓</div>`;
+    return `<div class="thumb-item"><img src="${b}" onclick="agrandir('${b.replace(/'/g,'%27')}')" alt=""><button class="thumb-x" onclick="supprimerPhoto('${id}',${i})">×</button></div>`;
+  }).join('')
+    +(arr.length?`<span class="thumb-count">${syncN}\u2713/${arr.length} photo${arr.length>1?'s':''}</span>`:'');
 }
 function supprimerPhoto(id,i){
+  const syncN=(state.sync&&state.sync[id])||0;
+  if(i<syncN){ showToast('✓ Photo déjà en sécurité au serveur','error'); return; }
   if(Array.isArray(state.photos[id])){ state.photos[id].splice(i,1); persisterPhotos(); renderThumbs(id); }
 }
 function photosDe(l){
@@ -466,8 +489,10 @@ function photosDe(l){
   return l.photo_preparation?[l.photo_preparation]:[];
 }
 async function validerPrep(id){
-  const photos=Array.isArray(state.photos[id])?state.photos[id]:[];
-  if(!photos.length){ showToast('📷 Ajoute au moins une photo','error'); return; }
+  const _tout=Array.isArray(state.photos[id])?state.photos[id]:[];
+  const _syncN=Math.min((state.sync&&state.sync[id])||0,_tout.length);
+  const photos=_tout.slice(_syncN);
+  if(!_tout.length){ showToast('📷 Ajoute au moins une photo','error'); return; }
   const l=(state.orders||[]).find(x=>String(x.id)===String(id));
   const bd=l?detailDe(l,'boissons_detail'):{};
   const body={ id, photos,
@@ -492,7 +517,7 @@ async function validerPrep(id){
         l.charbons_detail=body.charbons_detail; l.nb_charbons=Object.values(body.charbons_detail||{}).reduce((a,c)=>a+(parseInt(c)||0),0);
         l.plv_detail=body.plv_detail; l.nb_plv=Object.values(body.plv_detail||{}).reduce((a,c)=>a+(parseInt(c)||0),0);
         l.tpe_detail=body.tpe_detail; l.nb_tpe=Object.values(body.tpe_detail||{}).reduce((a,c)=>a+(parseInt(c)||0),0); }
-      delete state.photos[id]; persisterPhotos();
+      delete state.photos[id]; delete state.sync[id]; persisterPhotos();
       showToast('✅ Préparation validée','success');
       renderPrep();
       envoyerEtiquettes(id);
@@ -670,7 +695,7 @@ async function modifPhotos(id,inp){
   if(!state.modPhotos) state.modPhotos={};
   if(!Array.isArray(state.modPhotos[id])) state.modPhotos[id]=[];
   const files=Array.from(inp.files||[]); inp.value='';
-  for(const f of files){ try{ const b64=await compresserPhoto(f,1200,0.7); state.modPhotos[id].push(b64); }catch(_){ showToast('❌ Photo illisible','error'); } }
+  for(const f of files){ try{ const b64=await compresserPhoto(f,1000,0.62); state.modPhotos[id].push(b64); }catch(_){ showToast('❌ Photo illisible','error'); } }
   renderModifThumbs(id);
 }
 function renderModifThumbs(id){
@@ -763,5 +788,7 @@ ap(document.documentElement.getAttribute('data-theme')||'dark');var b=document.g
 })();
 </script>
 <div id="etiqOverlay"><div class="etiq-bar"><button class="etiq-print" onclick="lancerImpressionEtiq()">🖨️ Imprimer</button><button class="etiq-close" onclick="fermerEtiquettes()">✕ Fermer</button></div><div id="etiqZone"></div></div>
+<a href="index.html" title="Menu AJCV" style="position:fixed;bottom:16px;right:16px;z-index:9999;width:44px;height:44px;border-radius:50%;background:rgba(30,41,66,.88);border:1px solid rgba(255,255,255,.18);display:flex;align-items:center;justify-content:center;font-size:20px;text-decoration:none;box-shadow:0 4px 14px rgba(0,0,0,.35);backdrop-filter:blur(6px)">🏠</a>
+<script>/* TEST */document.addEventListener("DOMContentLoaded",function(){var b=document.createElement("div");b.textContent="\ud83e\uddea ENVIRONNEMENT TEST \u2014 donn\u00e9es fictives";b.style.cssText="position:fixed;top:0;left:0;right:0;z-index:99999;background:#F59E0B;color:#111;font-weight:800;text-align:center;padding:4px 8px;font-size:12px";document.body.appendChild(b)});</script>
 </body>
 </html>

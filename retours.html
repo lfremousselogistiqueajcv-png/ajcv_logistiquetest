@@ -102,6 +102,7 @@ function demarrer(){
   $('qui').textContent=S.login+' ('+S.role+')';
   fetch('version.json').then(r=>r.json()).then(v=>{$('vbadge').textContent='v'+v.version}).catch(()=>{});
   chargerDroits();rechercher('');ajouterLigne();chargerMes();
+  api('GET','/retours/clients').then(d=>{const dl=$('rc-clients');if(dl&&d.clients)dl.innerHTML=d.clients.map(c=>`<option value="${esc(c)}">`).join('')}).catch(()=>{});
 }
 // ── Déclaration (panier multi-articles, photos envoyées dès la prise) ──
 const MOTIFS={fuite:'Fuite',ne_s_allume_pas:"Ne s'allume pas",gout:'Goût',dlc:'DLC',casse:'Casse',autre:'Autre'};
@@ -168,7 +169,7 @@ async function chargerMes(){
   const d=await api('GET','/retours/mes');
   if(d.error){$('mes-fiches').textContent='❌ '+d.error;return}
   const F=d.fiches||[];
-  const dl=$('rc-clients'); if(dl) dl.innerHTML=[...new Set(F.map(f=>f.client_nom))].map(c=>`<option value="${esc(c)}">`).join('');
+
   $('mes-fiches').innerHTML=F.length?'<table><thead><tr><th>N°</th><th>Client</th><th>Article</th><th>Qté</th><th>Motif</th><th>Statut</th><th></th></tr></thead><tbody>'+
     F.map(f=>{const st=STATUTS[f.statut]||[f.statut,'#888'];
       const act=['declare','recu_depot'].includes(f.statut)?`<button class="btn" style="padding:5px 10px;font-size:12px" onclick="saisirFacture('${f.id}','${esc(f.numero)}')">💶 Facture + date</button>`:'';

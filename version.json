@@ -1,221 +1,201 @@
 {
-  "version": "2026.07.04.29",
+  "version": "2026.07.04.25",
   "app": "AJCV Logistique",
   "historique": [
     {
-      "v": "2026.07.04.29",
-      "date": "04/07/2026",
-      "titre": "[TEST] Fix : les formulaires ne se ferment plus par glissé",
-      "notes": [
-        "🐛 Un clic qui glissait depuis un champ vers le fond gris fermait le formulaire (ex. stock mini des contenants). Corrigé partout : la fermeture ne se déclenche que sur un vrai clic entamé sur le fond."
-      ]
-    },
-    {
-      "v": "2026.07.04.28",
-      "date": "04/07/2026",
-      "titre": "[TEST] Production CBD : exports CSV",
-      "notes": [
-        "⬇️ Nouvel onglet Exports : réceptions, productions, stock du jour et ventes (90 jours) en CSV format Excel, un tap chacun."
-      ]
-    },
-    {
-      "v": "2026.07.04.27",
-      "date": "04/07/2026",
-      "titre": "[TEST] Appli préparateur CBD : onglet « À produire »",
-      "notes": [
-        "🎯 Les préparateurs ouvrent désormais l'appli sur les priorités du jour : urgences d'abord, avec stock et quantité à produire.",
-        "➕ Un tap ouvre la saisie directement pré-remplie sur le bon produit."
-      ]
-    },
-    {
-      "v": "2026.07.04.26",
-      "date": "04/07/2026",
-      "titre": "[TEST] Dashboard : couverture de stock, origine, alertes documents",
-      "notes": [
-        "⏳ Couverture en jours sur chaque produit : au rythme des ventes des 7 derniers jours, combien de jours de stock restent (rouge si ≤ 3 j).",
-        "° Le stock théorique est marqué d'un ° (le comptage physique reste sans marque).",
-        "📁 Bandeau d'alerte si des lots de vrac n'ont pas leur dossier complet (facture + analyse labo) — clic direct vers les Documents.",
-        "ℹ️ Redéploiement du backend test nécessaire."
-      ]
-    },
-    {
       "v": "2026.07.04.25",
-      "date": "04/07/2026",
-      "titre": "[TEST] Production CBD : réorganisation des onglets",
+      "date": "06/08/2026",
+      "titre": "Préparateur : photos fiabilisées sur petits téléphones (mémoire)",
       "notes": [
-        "🗂️ Nouvel ordre : Ventes · Stock du jour · Saisie · Réceptions · Contenants · Documents · Traçabilité · Ateliers · Tableau de bord · Référentiel · Performance · Préparateurs · Paramètres.",
-        "🛒 L'appli s'ouvre sur les Ventes — le geste du matin."
+        "📷 Dès qu'une photo est en sécurité au serveur, elle est purgée du téléphone (vignette remplacée par un ✓ vert) — la mémoire ne s'accumule plus, l'appareil photo ne fait plus planter l'application sur les téléphones à faible mémoire.",
+        "🗜️ Photos légèrement plus compressées (qualité largement suffisante, deux fois moins lourdes).",
+        "🔒 Une photo déjà envoyée ne peut plus être supprimée par erreur depuis le téléphone."
       ]
     },
     {
       "v": "2026.07.04.24",
-      "date": "04/07/2026",
-      "titre": "[TEST] Production CBD : ventes journalières + stock théorique",
+      "date": "06/08/2026",
+      "titre": "Production CBD : lot vrac proposé automatiquement",
       "notes": [
-        "🛒 Nouvel onglet Ventes : chaque matin, saisis les ventes de la veille par produit (date par défaut : hier). Ressaisir une date la corrige.",
-        "📊 Stock théorique automatique : sans comptage du jour, le stock affiché = dernier comptage + pesées − assemblages − ventes. Le comptage physique reste le maître quand il existe.",
-        "ℹ️ Redéploiement du backend test nécessaire."
+        "🌾 À la pesée, le lot vrac est proposé automatiquement : même variété que le produit choisi, le plus ancien d'abord (FIFO). La liste ne montre que les lots compatibles, avec la variété et le restant.",
+        "➕ Fonctionne aussi depuis « À produire » (produit pré-sélectionné → lot vrac pré-sélectionné)."
       ]
     },
     {
       "v": "2026.07.04.23",
-      "date": "04/07/2026",
-      "titre": "[TEST] Production CBD : traçabilité complète (Phase C)",
+      "date": "06/08/2026",
+      "titre": "Bouton retour au menu AJCV",
       "notes": [
-        "🔎 Nouvel onglet Traçabilité : saisis n'importe quel lot (vrac, fournisseur, pochons, pack) → la chaîne complète s'affiche, du certificat fournisseur au pack, avec les documents liés.",
-        "📦 À la saisie d'une production d'assemblage, sélection des lots de pochons consommés — le lien pack → pochons → vrac est enregistré.",
-        "ℹ️ Redéploiement du backend test nécessaire."
+        "🏠 Un bouton flottant en bas à droite de chaque application ramène au menu d'accueil AJCV, sans se déconnecter."
       ]
     },
     {
       "v": "2026.07.04.22",
-      "date": "04/07/2026",
-      "titre": "[TEST] Réceptions : indicateur de pièces manquantes",
+      "date": "06/08/2026",
+      "titre": "Préparateur : retour de la prise de photo directe",
       "notes": [
-        "🧾🧪 Chaque réception affiche l'état de ses pièces : facture et analyse labo présentes → badge ok ; sinon badge « manquant » tant que le dossier du lot n'est pas complet."
+        "📷 Le bouton photo rouvre directement l'appareil photo (le passage par la galerie est supprimé).",
+        "🔒 Sans risque désormais : chaque photo part au serveur dès la prise — même si le téléphone ferme l'onglet, rien n'est perdu."
       ]
     },
     {
       "v": "2026.07.04.21",
-      "date": "04/07/2026",
-      "titre": "[TEST] Production CBD : documents de traçabilité",
+      "date": "02/08/2026",
+      "titre": "Préparateur : photos sécurisées dès la prise",
       "notes": [
-        "📁 Nouvel onglet Documents : factures d'achat et analyses laboratoire, filtrables par type, liées aux lots de vrac.",
-        "📎 Bouton sur chaque réception pour joindre directement une pièce au lot (PDF ou photo, max 7 Mo).",
-        "🔐 Réservé au responsable · chaque ajout/suppression est tracé."
+        "📷 Chaque photo part au serveur immédiatement après la prise — même si le téléphone ferme l'onglet (Samsung A17 et autres petits modèles), les photos déjà prises sont en sécurité, plus rien à refaire.",
+        "✓ Le compteur affiche l'état : « 2✓/3 photos » = 2 déjà en sécurité au serveur.",
+        "ℹ️ Redéploiement du backend (index.js) nécessaire."
       ]
     },
     {
       "v": "2026.07.04.20",
-      "date": "04/07/2026",
-      "titre": "[TEST] Production CBD : numéros de lot automatiques",
+      "date": "02/08/2026",
+      "titre": "Préparateur : photos fiabilisées sur petits téléphones",
       "notes": [
-        "🔢 Les numéros de lot se génèrent automatiquement si le champ est laissé vide : V-AAMMJJ-NN (réceptions vrac), L-AAMMJJ-NN (lots de pochons), P-AAMMJJ-NN (packs).",
-        "✍️ La saisie manuelle reste possible pour coller à un lot existant.",
-        "ℹ️ Nécessite le redéploiement du backend test."
+        "📷 Le bouton photo ouvre désormais le choix Appareil photo / Galerie au lieu de forcer la caméra dans l'onglet — sur les téléphones à faible mémoire (Samsung A17), passer par la Galerie évite les pertes de photos.",
+        "💡 Consigne équipe : prendre les photos avec l'application Caméra du téléphone, puis 📷 → Galerie → sélectionner les photos (plusieurs à la fois possible)."
       ]
     },
     {
       "v": "2026.07.04.19",
-      "date": "04/07/2026",
-      "titre": "[TEST] Production CBD : garde-fous métier",
+      "date": "29/07/2026",
+      "titre": "🌿 Production CBD en service (traçabilité, ventes, pointage)",
       "notes": [
-        "🛡️ La pesée refuse d'engager plus de vrac qu'il n'en reste sur le lot (message : restant / demandé).",
-        "🛡️ Le perçage refuse de consommer plus de pochons vides que le stock du contenant (message : en stock / nécessaires).",
-        "ℹ️ Nécessite le redéploiement du backend test (index.js)."
+        "🚀 Le module complet est en production : réceptions + documents + badges de conformité, lots automatiques, garde-fous, traçabilité certificat → pack, ventes journalières → stock théorique → priorités préparateur, dashboard avec couverture, exports CSV.",
+        "⏱️ Pointage de production : début / pause (avec motif) / reprise / clôture — chronologie horodatée et temps effectif à la minute."
       ]
     },
     {
       "v": "2026.07.04.18",
-      "date": "04/07/2026",
-      "titre": "[TEST] Production CBD : mise à jour automatique",
+      "date": "29/07/2026",
+      "titre": "Carte des livraisons : chargement par période",
       "notes": [
-        "🔄 L'admin production se met à jour automatiquement dès qu'une nouvelle version est publiée (badge de version dans l'en-tête, vérification à l'ouverture puis toutes les 2 minutes)."
+        "🗺️ La carte charge désormais uniquement la période affichée (fini la limite des 1000 livraisons qui masquait les récentes).",
+        "📅 Changer une date recharge automatiquement ; par défaut : aujourd'hui.",
+        "ℹ️ Nécessite le déploiement du backend (index.js)."
       ]
     },
     {
       "v": "2026.07.04.17",
-      "date": "04/07/2026",
-      "titre": "[TEST] Étiquettes : pied en bas de l'étiquette",
+      "date": "28/07/2026",
+      "titre": "🌿 Module Production CBD — mise en production",
       "notes": [
-        "🏷️ La date de livraison redescend en bas de l'étiquette à l'impression."
+        "🚀 Le module complet passe en production : réceptions + documents (factures, analyses labo) + badges de conformité, numéros de lot automatiques, garde-fous métier, traçabilité certificat → pack, ventes journalières → stock théorique → priorités, écran préparateur « À produire », dashboard avec couverture en jours, exports CSV."
       ]
     },
     {
       "v": "2026.07.04.16",
       "date": "04/07/2026",
-      "titre": "[TEST] Étiquettes : calage impression (haut-gauche)",
+      "titre": "Plan de tournée : rotation des zones",
       "notes": [
-        "🏷️ L'étiquette est ancrée en haut à gauche de la page à l'impression, quel que soit le format papier sélectionné."
+        "🔄 Nouveau bouton « Rotation zones » : jours de tournée par livreur et par zone, sur la semaine, le mois ou l'année.",
+        "💡 Le livreur qui a le plus couvert chaque zone est surligné — pour organiser une rotation équitable.",
+        "📊 Le bouton Rotation zones est aussi accessible depuis le Tableau de bord (KPI).",
+        "🚚 Le tableau « Par livreur » du KPI ventile désormais les livraisons par zone (Sud / Nord-Est / Ouest)."
       ]
     },
     {
       "v": "2026.07.04.15",
       "date": "04/07/2026",
-      "titre": "[TEST] Étiquettes 101,6×101,6 mm",
+      "titre": "Préparation : modifier une préparation validée",
       "notes": [
-        "🏷️ Gabarit 4x4 pouces."
+        "✏️ Sur chaque commande préparée : modifier le nombre de colis et/ou ajouter des photos, puis 💾 Enregistrer.",
+        "📷 Les nouvelles photos s'ajoutent aux existantes (rien n'est écrasé).",
+        "🏷️ Si le nombre de colis change, un rappel invite à réimprimer les étiquettes."
       ]
     },
     {
       "v": "2026.07.04.14",
       "date": "04/07/2026",
-      "titre": "[TEST] Étiquettes : format Zebra ZD220T (100×150 mm)",
+      "titre": "Étiquettes automatiques sur l'imprimante du dépôt",
       "notes": [
-        "🏷️ Gabarit 100×150 mm (ZD220T)."
+        "🖨️ À la validation d'une préparation, les étiquettes colis s'impriment automatiquement sur la Zebra du dépôt (serveur d'impression Raspberry Pi) — plus aucune manipulation.",
+        "🏷️ Le bouton « Réimprimer les étiquettes » renvoie le jeu complet sur l'imprimante.",
+        "✨ Étiquettes en ZPL natif 101,6×101,6 : client, adresse, téléphone, N° BL, COLIS 1/N, récap produits, date."
       ]
     },
     {
       "v": "2026.07.04.13",
       "date": "04/07/2026",
-      "titre": "[TEST] Étiquettes : format Brother QL-810Wc (62×100 mm)",
+      "titre": "Étiquettes : format 101,6 × 101,6 mm (rouleaux Zebra en stock)",
       "notes": [
-        "🏷️ Gabarit adapté à la Brother QL-810Wc : étiquettes 62×100 mm (rouleaux DK-1202), typographies compactées, lisibilité préservée."
+        "🏷️ Gabarit calé sur les étiquettes réelles : 101,6 × 101,6 mm (4\"×4\", mandrin 25 mm), thermique direct."
       ]
     },
     {
       "v": "2026.07.04.12",
       "date": "04/07/2026",
-      "titre": "[TEST] Étiquettes : numéro de téléphone du client",
+      "titre": "Préparation : les photos survivent aux rechargements",
       "notes": [
-        "☎️ L'étiquette colis affiche le téléphone du client (et le second numéro s'il existe), sous l'adresse."
+        "💾 Chaque photo prise est immédiatement sauvegardée sur le téléphone et restaurée automatiquement si la page recharge (Android ferme parfois l'appli pendant que l'appareil photo est ouvert, pour libérer de la mémoire).",
+        "✅ Résultat : plus aucune photo perdue — même si l'écran se recharge, les photos déjà prises réapparaissent et la préparation continue.",
+        "🧹 La sauvegarde se vide à chaque validation et chaque nouveau jour."
       ]
     },
     {
       "v": "2026.07.04.11",
       "date": "04/07/2026",
-      "titre": "[TEST] Préparation : étiquettes colis à imprimer (Zebra)",
+      "titre": "Préparation : fiabilisation de l'enchaînement des validations",
       "notes": [
-        "🏷️ À la validation d'une préparation, l'aperçu des étiquettes s'ouvre automatiquement : une étiquette par colis (client, adresse, N° BL, COLIS 1/N, récap produits).",
-        "🖨️ Un tap « Imprimer » → impression Android via Wi-Fi (Zebra/Mopria), format 100×150 mm.",
-        "♻️ Bouton « Réimprimer les étiquettes » sur chaque commande déjà préparée."
+        "🛡️ L'ouverture des étiquettes ne peut plus interrompre le flux : la liste se rafraîchit d'abord, l'aperçu s'ouvre ensuite, isolé."
       ]
     },
     {
       "v": "2026.07.04.10",
       "date": "04/07/2026",
-      "titre": "[TEST] Livreur : suppression du mode « toute l'île »",
+      "titre": "Étiquettes : format Zebra ZD220T (100×150 mm)",
       "notes": [
-        "🧹 Le basculement « mes livraisons / toutes les livraisons » est retiré : chaque livreur voit uniquement sa tournée affectée par le dispatch."
+        "🏷️ Gabarit étiquettes au format 100×150 mm pour la Zebra ZD220T (étiquettes thermiques directes, sans ruban)."
       ]
     },
     {
       "v": "2026.07.04.9",
       "date": "04/07/2026",
-      "titre": "[TEST] Livreur : verrouillage après confirmation du camion",
+      "titre": "Étiquettes : format Brother QL-810Wc (62×100 mm)",
       "notes": [
-        "🔒 Une fois le camion confirmé (photos envoyées), impossible de décocher une livraison chargée. Le cochage d'une livraison oubliée reste possible."
+        "🏷️ Gabarit étiquettes adapté à la Brother QL-810Wc : 62×100 mm (rouleaux DK-1202)."
       ]
     },
     {
       "v": "2026.07.04.8",
       "date": "04/07/2026",
-      "titre": "[TEST] Livreur : récap par produit (chargement + livraisons)",
+      "titre": "Récaps produits, étiquettes colis et verrouillage chargement",
       "notes": [
-        "📋 Le récap 🥤🔥🪧💳 affiche désormais le total par produit (ex. DESPERADOS : 20) en tête, puis le détail par client.",
-        "🚚 Nouvelle barre produits cliquable dans l'écran Livraisons pour retrouver les quantités en un geste."
+        "🚚 Plan de tournée (admin) : récap par livreur — livraisons, colis, totaux 🥤🔥🪧💳 cliquables avec détail par client et référence.",
+        "📋 Appli livreur : le récap produits affiche le total par référence (ex. DESPERADOS : 20) en tête, puis le détail par client — accessible depuis le Chargement et les Livraisons.",
+        "🔒 Une fois le camion confirmé, impossible de décocher une livraison chargée (le dépôt garde la main via « Permettre de recommencer »).",
+        "🧹 Le basculement « toute l'île » est retiré : chaque livreur voit sa tournée affectée.",
+        "🏷️ Préparation : à la validation, les étiquettes colis s'ouvrent automatiquement (client, adresse, ☎ téléphone, N° BL, COLIS 1/N, récap produits) — impression Wi-Fi Zebra, format 100×150 mm, bouton Réimprimer sur les commandes préparées."
       ]
     },
     {
       "v": "2026.07.04.7",
       "date": "04/07/2026",
-      "titre": "[TEST] Plan de tournée : récap produits par livreur",
+      "titre": "Plan de tournée : récap produits par livreur",
       "notes": [
-        "🚚 Charge par livreur : livraisons, colis, totaux 🥤🔥🪧💳 par tournée.",
-        "🔎 Totaux cliquables : détail par client et par référence — le picking exact de chaque camion."
+        "🚚 La charge par livreur affiche désormais, pour chaque tournée : livraisons, colis, et totaux 🥤 boissons · 🔥 charbons · 🪧 PLV · 💳 TPE.",
+        "🔎 Chaque total est cliquable : détail par client et par référence (même vue que les KPI) — le picking exact de chaque camion."
+      ]
+    },
+    {
+      "v": "2026.07.04.6",
+      "date": "04/07/2026",
+      "titre": "Préparation : photos fluides (fin des 20 secondes perdues)",
+      "notes": [
+        "📷 L'appli ne recharge plus toute la liste au retour de l'appareil photo : la photo s'affiche immédiatement, plus de réactualisation entre les prises, plus de photo perdue pendant un rechargement.",
+        "⏱️ La validation a désormais un délai maximum (60 s) : si le réseau pend, message clair et les photos restent conservées pour réessayer.",
+        "🔄 La liste se rafraîchit toujours au lancement, après chaque validation et via le bouton actualiser."
       ]
     },
     {
       "v": "2026.07.04.5",
       "date": "04/07/2026",
-      "titre": "[TEST] Production CBD : gestion des contenants (pochons vides)",
+      "titre": "Admin : toper « Livré » sur une livraison",
       "notes": [
-        "🛍️ Nouvel onglet Contenants : référentiel des pochons vides (référence, prix, stock mini), stock courant calculé et alerte réassort.",
-        "🧾 Achats de contenants : réceptions avec quantité, prix du lot et fournisseur.",
-        "⚙️ Consommation automatique du stock par l'atelier de perçage (paramétrable par atelier).",
-        "🔗 Chaque produit peut être lié à son contenant (Référentiel).",
-        "💰 Coût pochon dans la marge : coût du produit → prix du contenant lié → défaut config.",
-        "⚠️ SQL : cbd_contenants.sql (Supabase test)."
+        "✅ Nouveau bouton sur chaque ligne de l'onglet Livraisons : marquer une livraison « Livré » sans passer par l'appli livreur (avec confirmation).",
+        "↩️ Recliquer permet de remettre « À livrer » (efface la date de livraison).",
+        "🕒 La date et l'heure de livraison sont posées au moment du top (statistiques cohérentes)."
       ]
     },
     {
