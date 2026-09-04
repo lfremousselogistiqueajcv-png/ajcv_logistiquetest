@@ -68,7 +68,8 @@
           <option value="">Tous statuts</option><option value="declare">Déclaré</option><option value="recu_depot">Reçu dépôt</option>
           <option value="remplace">Remplacé</option><option value="livre">Livré</option><option value="refuse">Refusé</option>
         </select>
-        <input class="fld" id="rp-q" placeholder="Filtrer article / client / commercial / facture / n° RET…" style="flex:1;min-width:180px" oninput="renderReporting()">
+        <select class="fld" id="rp-art" style="max-width:240px" onchange="renderReporting()"><option value="">Tous les produits</option></select>
+        <input class="fld" id="rp-q" placeholder="Filtrer client / commercial / facture / n° RET…" style="flex:1;min-width:180px" oninput="renderReporting()">
         <button class="btn" style="background:#1E293B" onclick="exportReporting()">⬇️ CSV</button>
       </div>
       <div id="rp-synthese"></div>
@@ -244,11 +245,18 @@ async function chargerReporting(){
   if($('rp-st').value)p.set('statut',$('rp-st').value);
   const d=await api('GET','/retours/reporting?'+p.toString());
   if(d.error){$('rp-synthese').innerHTML='<span class="muted">❌ '+esc(d.error)+'</span>';return}
-  _rp=d.fiches||[];renderReporting();
+  _rp=d.fiches||[];
+  const sel=$('rp-art');const cur=sel.value;
+  const arts=[...new Map(_rp.map(f=>[f.ref,f.article])).entries()].sort((a,b)=>String(a[1]).localeCompare(String(b[1])));
+  sel.innerHTML='<option value="">Tous les produits</option>'+arts.map(([r,l])=>`<option value="${esc(r)}">${esc(r)} — ${esc(l)}</option>`).join('');
+  sel.value=cur&&arts.some(([r])=>r===cur)?cur:'';
+  renderReporting();
 }
 function _rpFiltre(){
   const q=($('rp-q').value||'').toLowerCase();
-  return q?_rp.filter(f=>[f.article,f.ref,f.client,f.commercial,f.numero,f.facture_origine,f.facture_remplacement].join(' ').toLowerCase().includes(q)):_rp;
+  const art=$('rp-art')?$('rp-art').value:'';
+  let L=art?_rp.filter(f=>f.ref===art):_rp;
+  return q?L.filter(f=>[f.article,f.ref,f.client,f.commercial,f.numero,f.facture_origine,f.facture_remplacement].join(' ').toLowerCase().includes(q)):L;
 }
 function renderReporting(){
   const F=_rpFiltre();
