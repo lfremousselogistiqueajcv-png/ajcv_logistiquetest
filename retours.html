@@ -68,7 +68,7 @@
           <option value="">Tous statuts</option><option value="declare">Déclaré</option><option value="recu_depot">Reçu dépôt</option>
           <option value="remplace">Remplacé</option><option value="livre">Livré</option><option value="refuse">Refusé</option>
         </select>
-        <input class="fld" id="rp-q" placeholder="Filtrer article / client / commercial…" style="flex:1;min-width:180px" oninput="renderReporting()">
+        <input class="fld" id="rp-q" placeholder="Filtrer article / client / commercial / facture / n° RET…" style="flex:1;min-width:180px" oninput="renderReporting()">
         <button class="btn" style="background:#1E293B" onclick="exportReporting()">⬇️ CSV</button>
       </div>
       <div id="rp-synthese"></div>
@@ -248,7 +248,7 @@ async function chargerReporting(){
 }
 function _rpFiltre(){
   const q=($('rp-q').value||'').toLowerCase();
-  return q?_rp.filter(f=>[f.article,f.ref,f.client,f.commercial].join(' ').toLowerCase().includes(q)):_rp;
+  return q?_rp.filter(f=>[f.article,f.ref,f.client,f.commercial,f.numero,f.facture_origine,f.facture_remplacement].join(' ').toLowerCase().includes(q)):_rp;
 }
 function renderReporting(){
   const F=_rpFiltre();
@@ -256,16 +256,36 @@ function renderReporting(){
   F.forEach(f=>{const k=f.ref||f.article;agg[k]=agg[k]||{ref:f.ref,article:f.article,fiches:0,qte:0,cout:0};
     agg[k].recu=(agg[k].recu||0)+(f.qte_recue||0);agg[k].fiches++;agg[k].qte+=f.qte;qT+=f.qte;if(f.cout!=null){agg[k].cout+=f.cout;cT+=f.cout}});
   const A=Object.values(agg).sort((a,b)=>b.qte-a.qte);
-  $('rp-synthese').innerHTML=A.length?`<div class="muted" style="margin-bottom:6px"><b style="color:var(--txt)">${F.length}</b> fiche(s) · <b style="color:var(--txt)">${qT}</b> produit(s) défectueux · coût gestes : <b style="color:var(--txt)">${cT.toFixed(2)} €</b></div>
+  const parStatut={},parMotif={};let dRec=[],retard=0;
+  F.forEach(f=>{parStatut[f.statut]=(parStatut[f.statut]||0)+1;parMotif[f.motif]=(parMotif[f.motif]||0)+f.qte;
+    if(f.recu_le)dRec.push((new Date(f.recu_le)-new Date(f.date))/86400000);
+    if(f.date_livraison_prevue&&f.statut!=='livre'&&f.statut!=='refuse'&&new Date(f.date_livraison_prevue)<new Date())retard++});
+  const dMoy=dRec.length?(dRec.reduce((a,b)=>a+b,0)/dRec.length):null;
+  const tuile=(v,l,c)=>`<div style="flex:1;min-width:105px;background:#0D1526;border:1px solid var(--bd);border-radius:10px;padding:10px;text-align:center"><div style="font-size:20px;font-weight:800;color:${c||'var(--txt)'}">${v}</div><div class="muted" style="font-size:11px">${l}</div></div>`;
+  $('rp-synthese').innerHTML=A.length?`
+  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
+    ${tuile(F.length,'Fiches')}${tuile(qT,'Produits déf.','#F87171')}${tuile(cT.toFixed(0)+' €','Coût gestes','#FBBF24')}
+    ${tuile(dMoy!=null?dMoy.toFixed(1)+' j':'—','Délai moy. réception')}${tuile(retard,'En retard',retard?'#F87171':'#4ADE80')}
+    ${tuile((parStatut.refuse||0),'Refusées')}
+  </div>
+  <div class="muted" style="margin-bottom:6px">Par motif : ${Object.entries(parMotif).sort((a,b)=>b[1]-a[1]).map(([m,q])=>(MOTIFS[m]||m)+' <b style="color:var(--txt)">'+q+'</b>').join(' · ')||'—'}
+   <button class="btn" style="padding:5px 12px;font-size:12px;margin-left:10px;background:#166534" onclick="dossierFournisseur()">📦 Dossier fournisseur (photos)</button></div>
     <table><thead><tr><th>Réf.</th><th>Article</th><th>Fiches</th><th>Qté déf.</th><th>Reçu dépôt</th><th>Coût</th></tr></thead><tbody>
     ${A.map(a=>`<tr><td><b>${esc(a.ref)}</b></td><td>${esc(a.article)}</td><td>${a.fiches}</td><td><b>${a.qte}</b></td><td>${a.recu||0}/${a.qte}${(a.recu||0)<a.qte?' <span class="pill err">incomplet</span>':' <span class="pill ok">✓</span>'}</td><td>${a.cout?a.cout.toFixed(2)+' €':'—'}</td></tr>`).join('')}</tbody></table>`:'<span class="muted">Aucune fiche sur la période.</span>';
   $('rp-detail').innerHTML=F.length?`<details><summary class="muted" style="cursor:pointer">Détail des ${F.length} fiches</summary>
-    <table style="margin-top:8px"><thead><tr><th>N°</th><th>Date</th><th>Commercial</th><th>Client</th><th>Article</th><th>Qté</th><th>Reçu</th><th>Motif</th><th>Fact. orig.</th><th>Fact. rempl.</th><th>Statut</th></tr></thead><tbody>
-    ${F.map(f=>`<tr><td>${esc(f.numero)}</td><td>${new Date(f.date).toLocaleDateString('fr-FR')}</td><td>${esc(f.commercial)}</td><td>${esc(f.client)}</td><td>${esc(f.ref)} <span class="muted">${esc(f.article)}</span></td><td>${f.qte}</td><td>${f.qte_recue||0}/${f.qte}</td><td>${MOTIFS[f.motif]||f.motif}</td><td>${esc(f.facture_origine||'—')}</td><td><b>${esc(f.facture_remplacement||'—')}</b></td><td>${(STATUTS[f.statut]||[f.statut])[0]}</td></tr>`).join('')}</tbody></table></details>`:'';
+    <table style="margin-top:8px"><thead><tr><th>N°</th><th>Date</th><th>Commercial</th><th>Client</th><th>Article</th><th>Qté</th><th>Reçu</th><th>Reçu le</th><th>Motif</th><th>Fact. orig.</th><th>Fact. rempl.</th><th>Livr. prévue</th><th>Statut</th></tr></thead><tbody>
+    ${F.map(f=>`<tr><td>${esc(f.numero)}</td><td>${new Date(f.date).toLocaleDateString('fr-FR')}</td><td>${esc(f.commercial)}</td><td>${esc(f.client)}</td><td>${esc(f.ref)} <span class="muted">${esc(f.article)}</span></td><td>${f.qte}</td><td>${f.qte_recue||0}/${f.qte}</td><td>${f.recu_le?new Date(f.recu_le).toLocaleDateString('fr-FR'):'—'}</td><td>${MOTIFS[f.motif]||f.motif}</td><td>${esc(f.facture_origine||'—')}</td><td><b>${esc(f.facture_remplacement||'—')}</b></td><td>${f.date_livraison_prevue?new Date(f.date_livraison_prevue).toLocaleDateString('fr-FR'):'—'}</td><td>${(STATUTS[f.statut]||[f.statut])[0]}</td></tr>`).join('')}</tbody></table></details>`:'';
+}
+function dossierFournisseur(){
+  const F=_rpFiltre();
+  if(!F.length){toast('Rien dans la sélection');return}
+  if(F.length>40){toast('Affine tes filtres : 40 fiches max par dossier (là : '+F.length+')');return}
+  toast('📦 Génération du dossier ('+F.length+' fiches)…');
+  window.open(API+'/retours/dossier?ids='+F.map(f=>f.id).join(',')+'&t='+encodeURIComponent(S.token),'_blank');
 }
 function exportReporting(){
   const F=_rpFiltre();if(!F.length){toast('Rien à exporter');return}
-  const cols=['numero','date','commercial','client','ref','article','qte','qte_recue','motif','statut','facture_origine','facture_remplacement','cout'];
+  const cols=['numero','date','recu_le','date_livraison_prevue','date_livraison_reelle','commercial','client','ref','article','qte','qte_recue','motif','statut','facture_origine','facture_remplacement','cout'];
   const cell=v=>{if(v==null)return'';const s=String(v).replace(/"/g,'""');return /[;"\n]/.test(s)?'"'+s+'"':s};
   const csv='\ufeff'+cols.join(';')+'\n'+F.map(f=>cols.map(c=>cell(f[c])).join(';')).join('\n');
   const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));
