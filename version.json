@@ -1,7 +1,16 @@
 {
-  "version": "2026.07.04.47",
+  "version": "2026.07.04.48",
   "app": "AJCV Logistique",
   "historique": [
+    {
+      "v": "2026.07.04.48",
+      "date": "16/09/2026",
+      "titre": "Livreur : barre d'onglets simplifiée",
+      "notes": [
+        "🧹 L'onglet Carte est retiré (non utilisé par l'équipe) et Planning quitte la barre d'onglets pour devenir un bouton 🗓️ dans l'en-tête, ouvert en fenêtre — il ne s'agit pas d'un statut de tournée, il n'avait pas sa place à côté de Livraisons/Chargement/Effectuées.",
+        "✅ Barre d'onglets réduite à l'essentiel : Livraisons, Chargement, Effectuées."
+      ]
+    },
     {
       "v": "2026.07.04.47",
       "date": "16/09/2026",

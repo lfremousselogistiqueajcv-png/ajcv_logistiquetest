@@ -324,6 +324,7 @@ html[data-theme="light"]{
         style="display:none;align-items:center;gap:4px;padding:4px 10px;background:#E8A63C;color:#181C23;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">
         📲 Installer
       </button>
+      <button class="header-btn" onclick="ouvrirMonPlanning()" title="Mon planning">🗓️</button>
       <button class="header-btn notif-btn" onclick="checkNotifications()">
         🔔<span class="notif-badge" id="notifBadge">0</span>
       </button>
@@ -338,14 +339,8 @@ html[data-theme="light"]{
     <div class="tab" onclick="switchTab('chargement')">
       <span class="tab-icon">🚚</span>Chargement
     </div>
-    <div class="tab" onclick="switchTab('carte')">
-      <span class="tab-icon">🗺️</span>Carte
-    </div>
     <div class="tab" onclick="switchTab('done')">
       <span class="tab-icon">✅</span>Effectuées
-    </div>
-    <div class="tab" onclick="switchTab('planning')">
-      <span class="tab-icon">🗓️</span>Planning
     </div>
   </div>
 
@@ -386,6 +381,23 @@ html[data-theme="light"]{
     <div class="modal-btns">
       <button class="btn-cancel" onclick="fermerModal()">Annuler</button>
       <button class="btn-confirm" onclick="confirmerStatut()">✅ Confirmer</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL MON PLANNING -->
+<div class="modal-bg" id="modalPlanning">
+  <div class="modal-sheet" style="max-height:80vh;overflow-y:auto">
+    <div class="modal-handle"></div>
+    <div class="modal-title">🗓️ Mon planning</div>
+    <div style="display:flex;align-items:center;justify-content:center;gap:14px;margin:8px 0 4px">
+      <button onclick="_semainePlanningDelta(-1)" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:var(--rs);padding:7px 12px;cursor:pointer">◀</button>
+      <span id="planningSemaine" style="color:var(--gold);font-weight:700;font-size:13px"></span>
+      <button onclick="_semainePlanningDelta(1)" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:var(--rs);padding:7px 12px;cursor:pointer">▶</button>
+    </div>
+    <div id="planningCorps"></div>
+    <div class="modal-btns">
+      <button class="btn-cancel" onclick="fermerMonPlanning()" style="width:100%">Fermer</button>
     </div>
   </div>
 </div>
@@ -1102,34 +1114,29 @@ function switchTab(tab) {
   state.activeTab = tab;
   if (tab === 'chargement') state._camionStatutDate = null;
   document.querySelectorAll('.tab').forEach((t,i) => {
-    t.classList.toggle('active', ['livraisons','chargement','carte','done','planning'][i] === tab);
+    t.classList.toggle('active', ['livraisons','chargement','done'][i] === tab);
   });
   renderTab();
-  // Fix Leaflet dans iframe : forcer redimensionnement quand on arrive sur la carte
-  if (tab === 'carte') {
-    setTimeout(() => { if (map) { map.invalidateSize(true); } }, 100);
-    setTimeout(() => { if (map) { map.invalidateSize(true); updateMapMarkers(); } }, 500);
-    setTimeout(() => { if (map) map.invalidateSize(true); }, 1000);
-  }
 }
 
 function renderTab() {
   if (state.activeTab === 'livraisons') renderLivraisons(false);
   else if (state.activeTab === 'chargement') renderChargement();
-  else if (state.activeTab === 'carte') renderCarte();
   else if (state.activeTab === 'done') renderLivraisons(true);
-  else if (state.activeTab === 'planning') renderMonPlanning();
 }
 
 // ════════════════════════════════════════
 // MON PLANNING (missions données par le responsable — lecture seule)
+// Ouvert en fenêtre depuis l'en-tête, pas un onglet : ce n'est pas un statut de tournée.
 // ════════════════════════════════════════
 function _escPlan(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 function _lundiDeSem(d){ const x=new Date(d); const j=(x.getDay()+6)%7; x.setDate(x.getDate()-j); return x; }
 function _isoJourLocal(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
 const _monPlanning={ weekStart:_isoJourLocal(_lundiDeSem(new Date())), items:[] };
+function ouvrirMonPlanning(){ document.getElementById('modalPlanning').classList.add('active'); renderMonPlanning(); }
+function fermerMonPlanning(){ document.getElementById('modalPlanning').classList.remove('active'); }
 async function renderMonPlanning(){
-  const c = document.getElementById('content');
+  const c = document.getElementById('planningCorps');
   c.innerHTML = '<div class="empty"><div class="empty-icon">⏳</div><div class="empty-title">Chargement...</div></div>';
   const d0=new Date(_monPlanning.weekStart+'T00:00:00');
   const jours=Array.from({length:7},(_,i)=>{const d=new Date(d0);d.setDate(d.getDate()+i);return _isoJourLocal(d);});
@@ -1143,26 +1150,18 @@ async function renderMonPlanning(){
   const parJour={}; _monPlanning.items.forEach(it=>{ (parJour[it.date_jour]=parJour[it.date_jour]||[]).push(it); });
   const auj=_isoJourLocal(new Date());
   const f=(iso)=>{const d=new Date(iso+'T00:00:00');return d.toLocaleDateString('fr-FR',{day:'2-digit',month:'short'});};
-  c.innerHTML = `
-    <div class="optimize-bar" style="justify-content:center;gap:14px">
-      <button class="header-btn" onclick="_semainePlanningDelta(-1)">◀</button>
-      <span style="color:var(--gold);font-weight:700">Semaine du ${f(jours[0])} au ${f(jours[6])}</span>
-      <button class="header-btn" onclick="_semainePlanningDelta(1)">▶</button>
-    </div>
-    <div class="list-section">
-      ${jours.map((j,i)=>{
-        const items=(parJour[j]||[]).sort((a,b)=>a.heure_debut.localeCompare(b.heure_debut));
-        return `<div class="section-label" style="${j===auj?'color:var(--gold)':''}">${JOURS_LBL[i]} ${f(j)}${j===auj?' · aujourd’hui':''}</div>
-          ${items.length?items.map(it=>`
-            <div class="liv-card" style="cursor:default">
-              <div class="liv-card-inner">
-                <div class="liv-client">${(it.taches_types&&it.taches_types.icone)||'📋'} ${(it.taches_types&&_escPlan(it.taches_types.nom))||'Mission'}</div>
-                <div class="liv-adresse">🕐 ${it.heure_debut.slice(0,5)} – ${it.heure_fin.slice(0,5)}${it.commentaire?' · '+_escPlan(it.commentaire):''}</div>
-              </div>
-            </div>`).join(''):'<div class="empty" style="padding:14px 16px;text-align:left"><span class="muted">Rien de prévu</span></div>'}
-        `;
-      }).join('')}
+  document.getElementById('planningSemaine').textContent = 'Semaine du '+f(jours[0])+' au '+f(jours[6]);
+  c.innerHTML = jours.map((j,i)=>{
+    const items=(parJour[j]||[]).sort((a,b)=>a.heure_debut.localeCompare(b.heure_debut));
+    return `<div style="margin-top:12px">
+      <div style="font-size:11px;font-weight:700;color:${j===auj?'var(--gold)':'var(--text3)'};text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">${JOURS_LBL[i]} ${f(j)}${j===auj?' · aujourd’hui':''}</div>
+      ${items.length?items.map(it=>`
+        <div style="background:var(--surface2);border-radius:10px;padding:8px 10px;margin-bottom:6px;font-size:13px">
+          <b>${(it.taches_types&&it.taches_types.icone)||'📋'} ${(it.taches_types&&_escPlan(it.taches_types.nom))||'Mission'}</b><br>
+          <span style="color:var(--text2)">🕐 ${it.heure_debut.slice(0,5)} – ${it.heure_fin.slice(0,5)}${it.commentaire?' · '+_escPlan(it.commentaire):''}</span>
+        </div>`).join(''):'<div style="color:var(--text2);font-size:12.5px;padding:2px 0 4px">Rien de prévu</div>'}
     </div>`;
+  }).join('');
 }
 function _semainePlanningDelta(delta){
   const d=new Date(_monPlanning.weekStart+'T00:00:00'); d.setDate(d.getDate()+delta*7);
