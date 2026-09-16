@@ -2530,6 +2530,7 @@ async function confirmerStatut() {
       showToast('✅ Statut mis à jour', 'success');
       renderTab();
       closeDetail();
+      if (statut === '❌ Non livré' && l.id) proposerAvisPassage(l);
     } else {
       showToast('❌ ' + (data.error || 'Code incorrect'), 'error');
     }
@@ -2996,6 +2997,17 @@ if ('Notification' in window) Notification.requestPermission();
 // ════════════════════════════════════════
 // HELPERS
 // ════════════════════════════════════════
+async function proposerAvisPassage(l){
+  if(!confirm('📩 Envoyer un avis de passage par email au client ?\n(passage horodaté + demande de reprogrammation)')) return;
+  try{
+    const resp=await fetch(`${CFG.API_URL}/livraisons/avis-passage`,{method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':`Bearer ${state.token||''}`},
+      body:JSON.stringify({id:l.id})});
+    const d=await resp.json();
+    if(d.success) showToast('📩 Avis envoyé à '+d.email,'success');
+    else showToast('❌ '+(d.error||'Envoi impossible'),'error');
+  }catch(e){ showToast('❌ Réseau : avis non envoyé','error'); }
+}
 function getStatutClass(statut) {
   const map = {'✅ Livré':'pill-livre','❌ Non livré':'pill-nonlivre','🔄 Reporté':'pill-reporte','📞 À rappeler':'pill-rappel'};
   return map[statut] || 'pill-attente';

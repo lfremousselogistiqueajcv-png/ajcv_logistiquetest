@@ -42,6 +42,7 @@
   <main>
     <div class="card">
       <h3>➕ Déclarer un retour</h3>
+      <select class="fld" id="rc-commercial" style="margin-bottom:8px"><option value="">— Commercial (qui a récupéré le produit) —</option></select>
       <input class="fld" id="rc-client" placeholder="Nom du client" list="rc-clients" style="margin-bottom:10px"><datalist id="rc-clients"></datalist>
       <div id="rc-lignes"></div>
       <button class="btn" style="background:#1E293B;margin-top:6px" onclick="ajouterLigne()">+ Ajouter un article</button>
@@ -80,11 +81,28 @@
       <div class="muted" style="margin-bottom:10px">Import CSV (séparateur ; ou ,) — colonnes : ref_odoo · libelle · code_barre · categorie · prix_achat. Import en mise à jour : une référence existante est actualisée, jamais doublée.</div>
       <label class="lbl-file">📥 Importer un CSV<input type="file" id="csv-file" accept=".csv,text/csv" onchange="importerCSV(this)"></label>
       <span id="imp-res" class="muted" style="margin-left:10px"></span>
+      <div style="border-top:1px solid var(--bd);margin-top:12px;padding-top:12px">
+        <div class="muted" style="margin-bottom:6px"><b style="color:var(--txt)">➕ Ajouter un article manuellement</b> (référence existante = mise à jour)</div>
+        <div style="display:grid;grid-template-columns:1fr 2fr;gap:8px">
+          <input class="fld" id="na-ref" placeholder="Réf. Odoo *">
+          <input class="fld" id="na-lib" placeholder="Libellé *">
+          <input class="fld" id="na-cb" placeholder="Code-barres (douchette)">
+          <input class="fld" id="na-cat" placeholder="Catégorie">
+          <input class="fld" id="na-px" placeholder="Prix d'achat (ex: 4,50)">
+          <button class="btn" onclick="ajouterArticle()">➕ Ajouter au catalogue</button>
+        </div>
+      </div>
     </div>
     <div class="card admin-only">
       <h3>🔎 Recherche (libellé, référence ou douchette)</h3>
       <input class="fld" id="rech" placeholder="Scanne un code-barres ou tape un libellé…" oninput="rechDebounce()" autofocus>
       <div id="rech-res" style="margin-top:10px"></div>
+    </div>
+    <div class="card admin-only">
+      <h3>🧑‍💼 Mes commerciaux</h3>
+      <div class="muted" style="margin-bottom:8px">La liste proposée à la déclaration d'un défectueux.</div>
+      <div style="display:flex;gap:8px;margin-bottom:8px"><input class="fld" id="cm-nom" placeholder="Nom du commercial" style="max-width:260px" onkeydown="if(event.key==='Enter')ajouterCommercial()"><button class="btn" onclick="ajouterCommercial()">+ Ajouter</button></div>
+      <div id="cm-liste" class="muted">Chargement…</div>
     </div>
     <div class="card admin-only">
       <h3>👥 Qui peut déclarer un retour</h3>
@@ -127,9 +145,32 @@ function demarrer(){
   if(estAdmin){ chargerDroits();rechercher('');const d=new Date();$('rp-fin').value=d.toISOString().split('T')[0];d.setDate(d.getDate()-30);$('rp-deb').value=d.toISOString().split('T')[0];chargerReporting();chargerReception(); }
   ajouterLigne();chargerMes();
   const majClients=()=>api('GET','/retours/clients').then(d=>{const dl=$('rc-clients');if(dl&&d.clients&&d.clients.length)dl.innerHTML=d.clients.map(c=>`<option value="${esc(c)}">`).join('');else if(d&&d.error)toast('⚠️ Clients : '+d.error)}).catch(()=>{});
-  majClients();
+  majClients();chargerCommerciaux();
   const rcC=$('rc-client'); if(rcC) rcC.onfocus=majClients;
   api('GET','/retours/clients').then(d=>{const dl=$('rc-clients');if(dl&&d.clients)dl.innerHTML=d.clients.map(c=>`<option value="${esc(c)}">`).join('')}).catch(()=>{});
+}
+// ── Référentiel commerciaux ──
+async function chargerCommerciaux(){
+  try{
+    const d=await api('GET','/retours/commerciaux');
+    const L=d.commerciaux||[];
+    const sel=$('rc-commercial');
+    if(sel){const cur=sel.value;sel.innerHTML='<option value="">— Commercial (qui a récupéré le produit) —</option>'+L.map(n=>`<option value="${esc(n)}">${esc(n)}</option>`).join('');if(cur&&L.includes(cur))sel.value=cur;}
+    const zone=$('cm-liste');
+    if(zone)zone.innerHTML=L.length?L.map(n=>`<span style="display:inline-flex;align-items:center;gap:6px;background:#0D1526;border:1px solid var(--bd);border-radius:99px;padding:5px 12px;margin:3px;color:var(--txt)">${esc(n)}<b style="cursor:pointer;color:#F87171" onclick="retirerCommercial('${esc(n)}')">✕</b></span>`).join(''):'Aucun commercial — ajoute-les ci-dessus.';
+  }catch(_){}
+}
+async function ajouterCommercial(){
+  const n=$('cm-nom').value.trim();if(!n){toast('Nom requis');return}
+  const r=await api('POST','/retours/commerciaux',{nom:n});
+  if(r.error){toast('❌ '+r.error);return}
+  $('cm-nom').value='';toast('✅ '+n+' ajouté');chargerCommerciaux();
+}
+async function retirerCommercial(n){
+  if(!confirm('Retirer '+n+' de la liste ?'))return;
+  const r=await api('POST','/retours/commerciaux',{nom:n,actif:false});
+  if(r.error){toast('❌ '+r.error);return}
+  toast('🚫 '+n+' retiré');chargerCommerciaux();
 }
 // ── Déclaration (panier multi-articles, photos envoyées dès la prise) ──
 const MOTIFS={fuite:'Fuite',ne_s_allume_pas:"Ne s'allume pas",gout:'Goût',dlc:'DLC',casse:'Casse',autre:'Autre'};
@@ -181,12 +222,14 @@ async function envoyerRetour(){
   const client=$('rc-client').value.trim();
   if(!client){toast('Nom du client requis');return}
   if(!P.lignes.length){toast('Ajoute au moins un article');return}
+  const selC=$('rc-commercial');const commercial_nom=selC?selC.value:'';
+  if(selC&&selC.options.length>1&&!commercial_nom){toast('Choisis le commercial');return}
   for(const l of P.lignes){
     if(!l.article){toast('Un article n\u2019est pas choisi');return}
     if(!l.photos.length){toast('Au moins une photo par article');return}
   }
   const b=$('rc-env');b.disabled=true;$('rc-msg').textContent='Envoi…';
-  const r=await api('POST','/retours',{client_nom:client,lignes:P.lignes.map(l=>({article_id:l.article.id,qte:l.qte,motif:l.motif,commentaire:l.commentaire,facture_origine:l.facture_origine,photos:l.photos}))});
+  const r=await api('POST','/retours',{client_nom:client,commercial_nom,lignes:P.lignes.map(l=>({article_id:l.article.id,qte:l.qte,motif:l.motif,commentaire:l.commentaire,facture_origine:l.facture_origine,photos:l.photos}))});
   b.disabled=false;
   if(r.error){$('rc-msg').textContent='❌ '+r.error;return}
   $('rc-msg').textContent='';toast('✅ '+r.numeros.join(', ')+' créé(s)');
@@ -211,8 +254,8 @@ async function chargerReception(){
   if(d.error){$('rd-liste').innerHTML='<span class="muted">❌ '+esc(d.error)+'</span>';return}
   const F=(d.fiches||[]).filter(f=>((parseInt(f.qte_recue)||0)<f.qte)&&['declare','remplace','recu_depot'].includes(f.statut));
   $('rd-count').textContent=F.length?'· '+F.length+' en attente':'';
-  $('rd-liste').innerHTML=F.length?'<table><thead><tr><th>N°</th><th>Client</th><th>Article</th><th>Qté</th><th>Reçu</th><th>Motif</th><th>Factures</th><th>Commercial</th><th></th></tr></thead><tbody>'+
-    F.map(f=>`<tr><td><b style="cursor:pointer;text-decoration:underline" onclick="ouvrirDetail('${f.id}')">${esc(f.numero)}</b></td><td>${esc(f.client_nom)}</td><td>${f.article?esc(f.article.ref_odoo):'—'}</td><td>${f.qte}</td><td><b>${parseInt(f.qte_recue)||0}/${f.qte}</b></td><td>${MOTIFS[f.motif]||f.motif}</td><td class="small">${f.facture_origine?'orig. '+esc(f.facture_origine):''}${f.facture_remplacement?(f.facture_origine?' · ':'')+'rempl. <b>'+esc(f.facture_remplacement)+'</b>':''}${(!f.facture_origine&&!f.facture_remplacement)?'—':''}</td><td>${esc(f.commercial)}</td>
+  $('rd-liste').innerHTML=F.length?'<table><thead><tr><th>N°</th><th>Date</th><th>Client</th><th>Article</th><th>Qté</th><th>Reçu</th><th>Motif</th><th>Factures</th><th>Commercial</th><th></th></tr></thead><tbody>'+
+    F.map(f=>`<tr><td><b style="cursor:pointer;text-decoration:underline" onclick="ouvrirDetail('${f.id}')">${esc(f.numero)}</b></td><td>${new Date(f.created_at).toLocaleDateString('fr-FR')}</td><td>${esc(f.client_nom)}</td><td>${f.article?esc(f.article.ref_odoo):'—'}</td><td>${f.qte}</td><td><b>${parseInt(f.qte_recue)||0}/${f.qte}</b></td><td>${MOTIFS[f.motif]||f.motif}</td><td class="small">${f.facture_origine?'orig. '+esc(f.facture_origine):''}${f.facture_remplacement?(f.facture_origine?' · ':'')+'rempl. <b>'+esc(f.facture_remplacement)+'</b>':''}${(!f.facture_origine&&!f.facture_remplacement)?'—':''}</td><td>${esc(f.commercial_nom||f.commercial)}</td>
       <td style="white-space:nowrap"><button class="btn" style="padding:5px 10px;font-size:12px;background:#166534" onclick="recevoirFiche('${f.id}','${esc(f.numero)}',${f.qte-(parseInt(f.qte_recue)||0)})">✅ Reçu</button>
       <button class="btn" style="padding:5px 10px;font-size:12px;background:#7F1D1D;margin-left:5px" onclick="refuserFiche('${f.id}','${esc(f.numero)}')">❌ Refuser</button></td></tr>`).join('')+
     '</tbody></table>':'<span class="muted">Rien en attente — tout est reçu. ✅</span>';
@@ -282,7 +325,7 @@ function renderReporting(){
     ${A.map(a=>`<tr><td><b>${esc(a.ref)}</b></td><td>${esc(a.article)}</td><td>${a.fiches}</td><td><b>${a.qte}</b></td><td>${a.recu||0}/${a.qte}${(a.recu||0)<a.qte?' <span class="pill err">incomplet</span>':' <span class="pill ok">✓</span>'}</td><td>${a.cout?a.cout.toFixed(2)+' €':'—'}</td></tr>`).join('')}</tbody></table>`:'<span class="muted">Aucune fiche sur la période.</span>';
   $('rp-detail').innerHTML=F.length?`<details><summary class="muted" style="cursor:pointer">Détail des ${F.length} fiches</summary>
     <table style="margin-top:8px"><thead><tr><th>N°</th><th>Date</th><th>Commercial</th><th>Client</th><th>Article</th><th>Qté</th><th>Reçu</th><th>Reçu le</th><th>Motif</th><th>Fact. orig.</th><th>Fact. rempl.</th><th>Livr. prévue</th><th>Statut</th></tr></thead><tbody>
-    ${F.map(f=>`<tr><td>${esc(f.numero)}</td><td>${new Date(f.date).toLocaleDateString('fr-FR')}</td><td>${esc(f.commercial)}</td><td>${esc(f.client)}</td><td>${esc(f.ref)} <span class="muted">${esc(f.article)}</span></td><td>${f.qte}</td><td>${f.qte_recue||0}/${f.qte}</td><td>${f.recu_le?new Date(f.recu_le).toLocaleDateString('fr-FR'):'—'}</td><td>${MOTIFS[f.motif]||f.motif}</td><td>${esc(f.facture_origine||'—')}</td><td><b>${esc(f.facture_remplacement||'—')}</b></td><td>${f.date_livraison_prevue?new Date(f.date_livraison_prevue).toLocaleDateString('fr-FR'):'—'}</td><td>${(STATUTS[f.statut]||[f.statut])[0]}</td></tr>`).join('')}</tbody></table></details>`:'';
+    ${F.map(f=>`<tr><td>${esc(f.numero)}</td><td>${new Date(f.date).toLocaleDateString('fr-FR')}</td><td>${esc(f.commercial_nom||f.commercial)}</td><td>${esc(f.client)}</td><td>${esc(f.ref)} <span class="muted">${esc(f.article)}</span></td><td>${f.qte}</td><td>${f.qte_recue||0}/${f.qte}</td><td>${f.recu_le?new Date(f.recu_le).toLocaleDateString('fr-FR'):'—'}</td><td>${MOTIFS[f.motif]||f.motif}</td><td>${esc(f.facture_origine||'—')}</td><td><b>${esc(f.facture_remplacement||'—')}</b></td><td>${f.date_livraison_prevue?new Date(f.date_livraison_prevue).toLocaleDateString('fr-FR'):'—'}</td><td>${(STATUTS[f.statut]||[f.statut])[0]}</td></tr>`).join('')}</tbody></table></details>`:'';
 }
 function dossierFournisseur(){
   const F=_rpFiltre();
@@ -342,13 +385,74 @@ async function ouvrirDetail(id){
   bg.innerHTML=`<div style="background:var(--card);border:1px solid var(--bd);border-radius:14px;max-width:600px;width:100%;max-height:85vh;overflow:auto;padding:18px;color:var(--txt)">
     <div style="display:flex;justify-content:space-between;align-items:center"><h3 style="margin:0">${esc(f.numero)} <span class="pill" style="background:${st[1]}22;color:${st[1]}">${st[0]}</span></h3><button class="btn" style="background:#1E293B;padding:5px 12px" onclick="document.getElementById('retDet').remove()">✕</button></div>
     <div style="margin:10px 0">${d.article?'<b>'+esc(d.article.ref_odoo)+'</b> — '+esc(d.article.libelle):'—'} · x${f.qte} · ${MOTIFS[f.motif]||f.motif}<br>
-      <span class="muted">Client : ${esc(f.client_nom)} · Commercial : ${esc(f.commercial)}${f.facture_origine?' · Fact. origine : '+esc(f.facture_origine):''}${f.facture_remplacement?' · Fact. rempl. : <b>'+esc(f.facture_remplacement)+'</b>':''}${f.date_livraison_prevue?' · Livraison prévue : '+esc(f.date_livraison_prevue):''}</span></div>
+      <span class="muted">Client : ${esc(f.client_nom)} · Commercial : ${esc(f.commercial_nom||f.commercial)}${f.facture_origine?' · Fact. origine : '+esc(f.facture_origine):''}${f.facture_remplacement?' · Fact. rempl. : <b>'+esc(f.facture_remplacement)+'</b>':''}${f.date_livraison_prevue?' · Livraison prévue : '+esc(f.date_livraison_prevue):''}</span></div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">${(d.photos||[]).map((p,ix)=>`<img src="${p.url}" onclick='voirPhotos(${JSON.stringify((d.photos||[]).map(x=>x.url)).replace(/'/g,"&#39;")},${ix})' style="width:92px;height:92px;object-fit:cover;border-radius:10px;border:1px solid var(--bd);cursor:pointer">`).join('')||'<span class="muted">Aucune photo.</span>'}</div>
+    <div id="det-outils"></div>
     <h3 style="font-size:14px">🕐 Historique</h3>
     ${(d.historique||[]).map(h=>`<div class="muted" style="padding:4px 0;border-bottom:1px solid var(--bd)">${new Date(h.created_at).toLocaleString('fr-FR')} · <b style="color:var(--txt)">${(STATUTS[h.nouveau_statut]||[h.nouveau_statut])[0]}</b> par ${esc(h.user_login)}${h.commentaire?' — '+esc(h.commentaire):''}</div>`).join('')||'<span class="muted">—</span>'}
   </div>`;
   bg.onmousedown=e=>{if(e.target===bg)bg.remove()};
   document.body.appendChild(bg);
+  const adm=['Admin','Depot'].includes(S.role);
+  const zone=document.getElementById('det-outils');
+  if(zone){
+    zone.innerHTML=`<div style="border:1px solid var(--bd);border-radius:10px;padding:10px;margin-bottom:12px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+      <label class="lbl-file" style="padding:7px 12px;font-size:13px">📷 Ajouter une photo<input type="file" accept="image/*" capture="environment" onchange="ajouterPhotoFiche('${f.id}',this)"></label>
+      ${adm?`<select class="fld" id="cor-st" style="max-width:150px;padding:7px">${Object.entries(STATUTS).map(([k,v])=>`<option value="${k}" ${f.statut===k?'selected':''}>${v[0]}</option>`).join('')}</select>
+      <input class="fld" id="cor-qr" type="number" min="0" max="${f.qte}" value="${parseInt(f.qte_recue)||0}" style="max-width:90px;padding:7px" title="Quantité reçue">
+      <span class="muted">/${f.qte} reçu</span>
+      <button class="btn" style="padding:7px 14px;font-size:13px" onclick="corrigerFiche('${f.id}','${esc(f.numero)}')">💾 Corriger</button>
+      <button class="btn" style="padding:7px 14px;font-size:13px;background:#1E293B" onclick="modifierFiche('${f.id}')">✏️ Modifier la fiche</button>`:''}
+    </div>`;
+  }
+}
+async function modifierFiche(id){
+  const d=await api('GET','/retours/'+id+'/detail');
+  if(d.error){toast('❌ '+d.error);return}
+  const f=d.fiche;
+  const zone=document.getElementById('det-outils');if(!zone)return;
+  const cms=Array.from(($('rc-commercial')||{options:[]}).options).map(o=>o.value).filter(Boolean);
+  zone.innerHTML=`<div style="border:1px solid var(--acc);border-radius:10px;padding:12px;margin-bottom:12px">
+    <b>✏️ Modification de ${esc(f.numero)}</b>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px">
+      <input class="fld" id="md-client" value="${esc(f.client_nom)}" placeholder="Client" list="rc-clients">
+      <select class="fld" id="md-com">${'<option value="">— Commercial —</option>'+cms.map(n=>`<option ${f.commercial_nom===n?'selected':''}>${esc(n)}</option>`).join('')}</select>
+      <input class="fld" id="md-qte" type="number" min="1" value="${f.qte}" placeholder="Qté">
+      <select class="fld" id="md-motif">${Object.entries(MOTIFS).map(([k,v])=>`<option value="${k}" ${f.motif===k?'selected':''}>${v}</option>`).join('')}</select>
+      <input class="fld" id="md-fo" value="${esc(f.facture_origine||'')}" placeholder="Facture d'origine">
+      <input class="fld" id="md-fr" value="${esc(f.facture_remplacement||'')}" placeholder="Facture de remplacement">
+      <input class="fld" id="md-dp" type="date" value="${f.date_livraison_prevue||''}">
+      <input class="fld" id="md-comm" value="${esc(f.commentaire||'')}" placeholder="Commentaire">
+    </div>
+    <div style="margin-top:10px;display:flex;gap:8px">
+      <button class="btn" onclick="enregistrerModif('${f.id}','${esc(f.numero)}')">💾 Enregistrer</button>
+      <button class="btn" style="background:#1E293B" onclick="document.getElementById('retDet').remove();ouvrirDetail('${f.id}')">Annuler</button>
+    </div></div>`;
+}
+async function enregistrerModif(id,num){
+  const g=x=>document.getElementById(x).value;
+  const r=await api('PATCH','/retours/'+id+'/modifier',{client_nom:g('md-client'),commercial_nom:g('md-com'),qte:parseInt(g('md-qte')),motif:g('md-motif'),facture_origine:g('md-fo'),facture_remplacement:g('md-fr'),date_livraison_prevue:g('md-dp'),commentaire:g('md-comm')});
+  if(r.error){toast('❌ '+r.error);return}
+  toast(r.rien?'Aucun changement':'💾 '+num+' modifié');
+  document.getElementById('retDet').remove();chargerMes();chargerReception();chargerReporting();ouvrirDetail(id);
+}
+async function corrigerFiche(id,num){
+  const r=await api('PATCH','/retours/'+id+'/corriger',{statut:document.getElementById('cor-st').value,qte_recue:parseInt(document.getElementById('cor-qr').value)});
+  if(r.error){toast('❌ '+r.error);return}
+  toast('💾 '+num+' corrigé');document.getElementById('retDet').remove();
+  chargerMes();chargerReception();chargerReporting();ouvrirDetail(id);
+}
+async function ajouterPhotoFiche(id,input){
+  const file=input.files&&input.files[0];input.value='';if(!file)return;
+  toast('⏳ Envoi de la photo…');
+  try{
+    const b64=await compresser(file,1600,0.8);
+    const up=await api('POST','/retours/photo',{photo:b64});
+    if(up.error){toast('❌ '+up.error);return}
+    const r=await api('POST','/retours/'+id+'/photos',{photos:[up.path]});
+    if(r.error){toast('❌ '+r.error);return}
+    toast('📷 Photo ajoutée');document.getElementById('retDet').remove();ouvrirDetail(id);
+  }catch(e){toast('❌ Photo illisible ou réseau')}
 }
 async function saisirFacture(id,num){
   const fac=prompt('N° de facture de remplacement pour '+num+' :');if(fac===null||!fac.trim())return;
@@ -356,6 +460,16 @@ async function saisirFacture(id,num){
   const r=await api('PATCH','/retours/'+id+'/facture',{facture_remplacement:fac.trim(),date_livraison_prevue:dt.trim()});
   if(r.error){toast('❌ '+r.error);return}
   toast('✅ '+num+' → Remplacé');chargerMes();
+}
+async function ajouterArticle(){
+  const g=x=>$(x).value.trim();
+  const ref=g('na-ref'),lib=g('na-lib');
+  if(!ref||!lib){toast('Référence et libellé obligatoires');return}
+  const r=await api('POST','/retours/articles/import',{lignes:[{ref_odoo:ref,libelle:lib,code_barre:g('na-cb'),categorie:g('na-cat'),prix_achat:g('na-px')}]});
+  if(r.error){toast('❌ '+r.error);return}
+  toast(r.crees?'✅ '+ref+' créé':'🔁 '+ref+' mis à jour');
+  ['na-ref','na-lib','na-cb','na-cat','na-px'].forEach(x=>$(x).value='');
+  $('na-ref').focus();rechercher($('rech').value);
 }
 // ── Import CSV ──
 function importerCSV(input){
@@ -417,5 +531,6 @@ async function majDroit(login,actif){
 })();
 </script>
 <a href="index.html" title="Menu AJCV" style="position:fixed;bottom:16px;right:16px;z-index:9999;width:44px;height:44px;border-radius:50%;background:rgba(30,41,66,.88);border:1px solid rgba(255,255,255,.18);display:flex;align-items:center;justify-content:center;font-size:20px;text-decoration:none;box-shadow:0 4px 14px rgba(0,0,0,.35)">🏠</a>
+<script>/* TEST */document.addEventListener("DOMContentLoaded",function(){var b=document.createElement("div");b.textContent="\ud83e\uddea ENVIRONNEMENT TEST \u2014 donn\u00e9es fictives";b.style.cssText="position:fixed;top:0;left:0;right:0;z-index:99999;background:#F59E0B;color:#111;font-weight:800;text-align:center;padding:4px 8px;font-size:12px";document.body.appendChild(b)});</script>
 </body>
 </html>

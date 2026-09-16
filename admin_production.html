@@ -743,8 +743,8 @@ function formReception(r){
 // ══════════════
 // POINTAGE (temps de production)
 // ══════════════
-const _PT_LBL={debut:'▶️ Démarrer la journée',pause:'⏸️ Pause',reprise:'▶️ Reprendre',cloture:'🏁 Clôturer la journée'};
-const _PT_ETAT={debut:'🟢 En production',reprise:'🟢 En production',pause:'🟡 En pause',cloture:'🔴 Journée clôturée'};
+const _PT_LBL={debut:'▶️ Démarrer un créneau',pause:'⏸️ Pause',reprise:'▶️ Reprendre',cloture:'🏁 Clôturer la journée'};
+const _PT_ETAT={debut:'🟢 En production',reprise:'🟢 En production',pause:'🟡 En pause',cloture:'🔴 Créneau terminé'};
 async function renderPointage(){
   $('content').innerHTML='<div class="loading">Chargement…</div>';
   const d=await api('GET','/cbd/pointages');
@@ -757,7 +757,7 @@ async function renderPointage(){
   const chrono=prep=>((d.evenements||[]).filter(e=>e.preparateur===prep).map(e=>_ptIco[e.type]+' '+fmtH(e.horodatage)+(e.motif?' ('+esc(e.motif)+')':'')).join(' → '))||'—';
   if(!respo){
     const etat=mien?mien.etat:null;
-    const suiv={null:['debut'],debut:['pause','cloture'],reprise:['pause','cloture'],pause:['reprise','cloture'],cloture:[]}[etat]||[];
+    const suiv={null:['debut'],debut:['pause','cloture'],reprise:['pause','cloture'],pause:['reprise','cloture'],cloture:['debut']}[etat]||[];
     $('content').innerHTML=`<div class="card"><h3>⏱️ Mon pointage</h3>
       <div style="font-size:18px;font-weight:800;margin:10px 0">${etat?_PT_ETAT[etat]:'⚪ Pas encore pointé'}</div>
       <div class="small muted">Début : ${fmtH(mien&&mien.debut)} · Pauses : ${mien?mien.pauses:0} · Temps effectif : <b>${fmtM(mien?mien.effectif_min:null)}</b> · Pause : ${mien&&mien.pause_min!=null?mien.pause_min+' min':'—'}</div>
