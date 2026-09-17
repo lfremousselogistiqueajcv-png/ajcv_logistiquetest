@@ -1,7 +1,27 @@
 {
-  "version": "2026.07.04.51",
+  "version": "2026.07.04.53",
   "app": "AJCV Logistique",
   "historique": [
+    {
+      "v": "2026.07.04.53",
+      "date": "17/09/2026",
+      "titre": "Zones géographiques à 4 secteurs + correctif fuseau horaire",
+      "notes": [
+        "📍 Les zones de livraison sont maintenant purement géographiques : Nord, Sud, Est et Ouest (au lieu de 3 zones \"Nord-Est\" combinées) — tous les livreurs peuvent couvrir n'importe quelle zone, elles ne sont plus liées à un livreur fixe.",
+        "🗺️ Carte des zones, filtres (livraisons, clients, comptes), simulation de répartition et KPI par zone mis à jour partout avec les 4 nouveaux secteurs.",
+        "🐞 Correctif : les filtres par date (livraisons, journal d'activité, signatures, rotation des zones...) pouvaient renvoyer 0 résultat selon le fuseau horaire de la machine qui exécute le serveur — corrigé définitivement."
+      ]
+    },
+    {
+      "v": "2026.07.04.52",
+      "date": "17/09/2026",
+      "titre": "Tournée : optimisation IA (fin de Google Maps pour le calcul)",
+      "notes": [
+        "🤖 Appli livreur : après « Optimiser », l'IA vérifie le plan par rapport aux horaires, contraintes (SUR RDV, AVANT 9H, hayon...) et priorités de chaque client, et ajuste l'ordre si besoin — avec une courte explication.",
+        "🤖 Plan de tournée (admin) : nouveau panneau « Tournée optimisée (IA) » pour générer le plan d'un livreur à une date donnée.",
+        "🗺️ Le calcul de l'ordre de tournée n'utilise plus Google Maps (OSRM, gratuit) — nécessite une clé Anthropic (variable ANTHROPIC_KEY) pour activer la vérification IA ; sans clé, le plan géographique reste utilisé normalement."
+      ]
+    },
     {
       "v": "2026.07.04.51",
       "date": "16/09/2026",
