@@ -569,7 +569,7 @@ function renderAccueil(){
     {label:'Administration', items:[
       ['🔐','Utilisateurs','users','Comptes, rôles, casquettes'],
       ['📋','Journal d’activité','journal','Historique des actions, filtrable'],
-      ['🚐','Flotte','flotte','Véhicules et affectations'],
+      ['🚐','Flotte','flotte','Véhicules, registre d’utilisation, carburant, alertes'],
       ['🔧','Maintenance','maint','Mise en pause des applis'],
     ]},
   ];
@@ -2850,18 +2850,85 @@ function imprimerDoc(){
 // ════════════════════════════════════════════════════════════════════════════
 // ONGLET FLOTTE (affectations véhicules)
 // ════════════════════════════════════════════════════════════════════════════
+// ── Sous-onglets de l'espace Flotte (véhicules, registre d'utilisation, carburant) ──
+let _flotteTab = 'dashboard';
+const FLOTTE_TABS = [
+  ['dashboard','📊 Vue d’ensemble'],
+  ['vehicules','🚚 Véhicules'],
+  ['utilisations','📋 Utilisations'],
+  ['carburant','⛽ Carburant'],
+  ['cartes','💳 Cartes'],
+  ['alertes','🚨 Alertes'],
+  ['config','⚙️ Configuration'],
+];
 async function renderFlotte(){
-  const today=new Date().toISOString().split('T')[0];
-  document.getElementById('content').innerHTML=`
+  document.getElementById('content').innerHTML = `
+    <div class="card" style="margin-bottom:14px">
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        ${FLOTTE_TABS.map(([k,l])=>`<button class="kpi-per ${_flotteTab===k?'active':''}" onclick="flotteAllerTab('${k}')">${l}</button>`).join('')}
+      </div>
+    </div>
+    <div id="flotteBody"><div class="loading"><div class="spin"></div></div></div>`;
+  await flotteChargerTab();
+}
+function flotteAllerTab(k){ _flotteTab=k; renderFlotte(); }
+function flotteChargerTab(){
+  const body=document.getElementById('flotteBody');
+  if(_flotteTab==='dashboard')     return flotteRenderDashboard(body);
+  if(_flotteTab==='vehicules')     return flotteRenderVehicules(body);
+  if(_flotteTab==='utilisations')  return flotteRenderUtilisations(body);
+  if(_flotteTab==='carburant')     return flotteRenderCarburant(body);
+  if(_flotteTab==='cartes')        return flotteRenderCartes(body);
+  if(_flotteTab==='alertes')       return flotteRenderAlertes(body);
+  if(_flotteTab==='config')        return flotteRenderConfig(body);
+}
+
+// ── Vue d'ensemble ──
+async function flotteRenderDashboard(body){
+  const d = await api('GET','/flotte/admin/dashboard').catch(()=>null);
+  if(!d || d.error){ body.innerHTML = '<div class="card"><p class="err" style="display:block">Erreur de chargement du dashboard</p></div>'; return; }
+  const alertesLbl = {
+    volume_superieur_reservoir:'Volume > réservoir', plusieurs_pleins_meme_jour:'Plusieurs pleins/jour',
+    hors_plage_horaire:'Hors plage horaire', km_retour_incoherent:'Km retour incohérent',
+    consommation_anormale:'Consommation anormale', plein_sans_photo:'Plein sans photo',
+  };
+  const kpi=(label,val,color)=>`<div style="flex:1;min-width:130px;background:var(--surface2);border-radius:10px;padding:14px;text-align:center"><div style="font-size:24px;font-weight:800;color:${color||'var(--text)'}">${val}</div><div style="font-size:11px;color:var(--text2);margin-top:4px">${label}</div></div>`;
+  body.innerHTML = `
     <div class="card">
-      <div class="flex-between"><h3>🚚 Mes camions</h3>
-        <button class="btn btn-green btn-sm" onclick="ajouterVehicule()">➕ Ajouter un camion</button></div>
-      <p class="muted" style="margin:12px 0 14px">Les plaques enregistrées ici apparaissent dans la liste de choix du livreur (évite les erreurs de saisie).</p>
-      <div id="vehicules-liste"></div>
+      <h3 style="margin:0 0 12px">📊 Ce mois (${d.periode.debut} → ${d.periode.fin})</h3>
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+        ${kpi('Véhicules actifs', d.vehicules_total)}
+        ${kpi('En circulation', d.vehicules_en_cours, 'var(--blue)')}
+        ${kpi('Pleins ce mois', d.pleins_mois)}
+        ${kpi('Montant carburant', d.montant_mois.toFixed(2)+' €', 'var(--gold)')}
+        ${kpi('Litres', d.litres_mois+' L')}
+        ${kpi('Sans photo', d.pleins_sans_photo, d.pleins_sans_photo>0?'var(--red)':'var(--green)')}
+        ${kpi('Alertes ouvertes', d.alertes_ouvertes, d.alertes_ouvertes>0?'var(--red)':'var(--green)')}
+      </div>
+    </div>
+    ${Object.keys(d.alertes_par_type).length ? `<div class="card">
+      <h3 style="margin:0 0 10px">🚨 Alertes ouvertes par type</h3>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">${Object.entries(d.alertes_par_type).map(([t,n])=>`<span class="pill" style="background:rgba(240,85,90,.15);color:var(--red)">${esc(alertesLbl[t]||t)} · ${n}</span>`).join('')}</div>
+    </div>`:''}
+    <div class="card">
+      <h3 style="margin:0 0 10px">🚗 Véhicules actuellement en circulation</h3>
+      ${d.utilisations_en_cours.length ? `<div class="table-wrap"><table><thead><tr><th>Conducteur</th><th>Depuis</th></tr></thead><tbody>${d.utilisations_en_cours.map(u=>`<tr><td>${esc(u.conducteur_login)}</td><td class="muted">${new Date(u.date_depart).toLocaleString('fr-FR')}</td></tr>`).join('')}</tbody></table></div>` : '<p class="muted">Aucun véhicule en circulation actuellement.</p>'}
+    </div>`;
+}
+
+// ── Véhicules (+ affectations existantes) ──
+async function flotteRenderVehicules(body){
+  const today=new Date().toISOString().split('T')[0];
+  body.innerHTML=`
+    <div class="card">
+      <div class="flex-between"><h3>🚚 Mes véhicules</h3>
+        <button class="btn btn-green btn-sm" onclick="ajouterVehicule()">➕ Ajouter un véhicule</button></div>
+      <p class="muted" style="margin:12px 0 14px">Renseigne la capacité du réservoir et la consommation de référence pour activer les alertes anti-fraude sur ce véhicule.</p>
+      <div id="vehicules-liste"><div class="loading"><div class="spin"></div></div></div>
     </div>
     <div class="card">
       <h3>🚐 Affectations du jour</h3>
-      <p class="muted" style="margin-bottom:14px">Qui conduit quel fourgon, quel jour. Enregistré automatiquement quand le livreur démarre sa tournée.</p>
+      <p class="muted" style="margin-bottom:14px">Qui conduit quel véhicule, quel jour. Enregistré automatiquement quand le livreur démarre sa tournée.</p>
       <label>Date</label><input type="date" id="fl-jour" value="${today}" onchange="chargerFlotte()" style="max-width:200px;margin-bottom:14px">
       <div id="flotte-liste"></div>
     </div>`;
@@ -2873,15 +2940,34 @@ async function chargerVehicules(){
   el.innerHTML='<div class="loading"><div class="spin"></div></div>';
   const r=await api('GET','/vehicules').catch(()=>({vehicules:[]}));
   const v=r.vehicules||[];
-  if(v.length===0){el.innerHTML='<div class="loading">Aucun camion enregistré. Cliquez "➕ Ajouter un camion".</div>';return;}
+  window._flotteVehiculesData = v;
+  if(v.length===0){el.innerHTML='<div class="loading">Aucun véhicule enregistré. Cliquez "➕ Ajouter un véhicule".</div>';return;}
   el.innerHTML=`<div class="table-wrap"><table>
-    <thead><tr><th>Plaque</th><th>Description</th><th></th></tr></thead>
+    <thead><tr><th>Plaque</th><th>Marque / Modèle</th><th>Réservoir</th><th>Conso réf.</th><th></th></tr></thead>
     <tbody>${v.map(x=>`<tr>
-      <td><b style="font-family:monospace;font-size:15px">${esc(x.plaque)}</b></td>
-      <td class="muted">${esc(x.description||'—')}</td>
-      <td><button class="btn btn-red btn-sm" onclick="suppVehicule('${x.id}','${esc(x.plaque)}')">🗑️</button></td>
+      <td><b style="font-family:monospace;font-size:15px">${esc(x.plaque)}</b><div class="muted" style="font-size:11px">${esc(x.description||'')}</div></td>
+      <td class="muted">${esc([x.marque,x.modele].filter(Boolean).join(' ')||'—')}</td>
+      <td class="muted">${x.capacite_reservoir_l?x.capacite_reservoir_l+' L':'—'}</td>
+      <td class="muted">${(x.conso_ref_min_l_100km&&x.conso_ref_max_l_100km)?x.conso_ref_min_l_100km+'–'+x.conso_ref_max_l_100km+' L/100km':'—'}</td>
+      <td style="white-space:nowrap"><button class="btn btn-sm" onclick="flotteEditerVehicule('${x.id}')">✏️</button> <button class="btn btn-red btn-sm" onclick="suppVehicule('${x.id}','${esc(x.plaque)}')">🗑️</button></td>
     </tr>`).join('')}</tbody>
   </table></div>`;
+}
+async function flotteEditerVehicule(id){
+  const v = (window._flotteVehiculesData||[]).find(x=>String(x.id)===String(id));
+  if(!v) return;
+  const marque=prompt('Marque :', v.marque||''); if(marque===null) return;
+  const modele=prompt('Modèle :', v.modele||''); if(modele===null) return;
+  const capacite=prompt('Capacité du réservoir (litres) :', v.capacite_reservoir_l||''); if(capacite===null) return;
+  const consoMin=prompt('Consommation de référence — minimum (L/100km) :', v.conso_ref_min_l_100km||''); if(consoMin===null) return;
+  const consoMax=prompt('Consommation de référence — maximum (L/100km) :', v.conso_ref_max_l_100km||''); if(consoMax===null) return;
+  const r = await api('PATCH','/flotte/admin/vehicules/'+id, {
+    marque: marque.trim()||null, modele: modele.trim()||null,
+    capacite_reservoir_l: capacite?parseFloat(capacite):null,
+    conso_ref_min_l_100km: consoMin?parseFloat(consoMin):null,
+    conso_ref_max_l_100km: consoMax?parseFloat(consoMax):null,
+  }).catch(e=>({error:e.message}));
+  if(r&&r.success){ toast('✅ Véhicule mis à jour'); chargerVehicules(); } else toast('❌ '+((r&&r.error)||'Erreur'));
 }
 async function ajouterVehicule(){
   const plaque=prompt('Plaque du camion (ex: GC-216-MR) :');
@@ -2914,6 +3000,199 @@ async function chargerFlotte(){
       <td class="muted">${a.heure_debut?new Date(a.heure_debut).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}):'—'}</td>
     </tr>`).join('')}</tbody>
   </table></div>`;
+}
+
+// ── Utilisations (registre prise/retour) ──
+async function flotteRenderUtilisations(body){
+  body.innerHTML = `
+    <div class="card">
+      <div class="flex-between"><h3>📋 Utilisations des véhicules</h3></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin:12px 0;align-items:center">
+        <input type="date" id="fu-debut" onchange="flotteChargerUtilisations()"><span class="muted">au</span><input type="date" id="fu-fin" onchange="flotteChargerUtilisations()">
+      </div>
+      <div id="fu-liste"><div class="loading"><div class="spin"></div></div></div>
+    </div>`;
+  flotteChargerUtilisations();
+}
+async function flotteChargerUtilisations(){
+  const debut=document.getElementById('fu-debut').value, fin=document.getElementById('fu-fin').value;
+  const q=[]; if(debut) q.push('debut='+debut); if(fin) q.push('fin='+fin);
+  const r = await api('GET','/flotte/admin/utilisations'+(q.length?'?'+q.join('&'):'')).catch(()=>({utilisations:[]}));
+  const list=r.utilisations||[];
+  const el=document.getElementById('fu-liste');
+  if(!list.length){ el.innerHTML='<p class="muted">Aucune utilisation sur cette période.</p>'; return; }
+  const statutLbl={en_cours:['En cours','var(--blue)'],cloturee:['Terminé','var(--green)'],anomalie:['Anomalie','var(--red)']};
+  const trajetLbl={professionnel:'Professionnel',mixte:'Mixte',personnel:'Personnel'};
+  el.innerHTML = `<div class="table-wrap"><table><thead><tr><th>Véhicule</th><th>Conducteur</th><th>Départ</th><th>Km</th><th>Motif</th><th>Trajet</th><th>Statut</th></tr></thead><tbody>
+    ${list.map(u=>{
+      const v=u.vehicules||{}; const [lbl,col]=statutLbl[u.statut]||['—','var(--text2)'];
+      const km = u.km_retour!=null ? (u.km_retour-u.km_depart)+' km' : u.km_depart+' km (départ)';
+      return `<tr><td><b>${esc(v.plaque||'?')}</b></td><td class="muted">${esc(u.conducteur_login)}</td><td class="muted">${new Date(u.date_depart).toLocaleString('fr-FR')}</td><td class="muted">${km}</td><td class="muted">${esc(u.motif)}</td><td class="muted">${trajetLbl[u.type_trajet]||u.type_trajet}</td><td><span class="pill" style="background:${col}22;color:${col}">${lbl}</span></td></tr>`;
+    }).join('')}
+  </tbody></table></div>`;
+}
+
+// ── Carburant (pleins + export) ──
+async function flotteRenderCarburant(body){
+  body.innerHTML = `
+    <div class="card">
+      <div class="flex-between"><h3>⛽ Pleins de carburant</h3><button class="btn btn-sm" style="background:#1D6F42;color:#fff" onclick="flotteExportCSV()">📥 Export CSV</button></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin:12px 0;align-items:center">
+        <input type="date" id="fp-debut" onchange="flotteChargerPleins()"><span class="muted">au</span><input type="date" id="fp-fin" onchange="flotteChargerPleins()">
+      </div>
+      <div id="fp-liste"><div class="loading"><div class="spin"></div></div></div>
+    </div>`;
+  flotteChargerPleins();
+}
+async function flotteChargerPleins(){
+  const debut=document.getElementById('fp-debut').value, fin=document.getElementById('fp-fin').value;
+  const q=[]; if(debut) q.push('debut='+debut); if(fin) q.push('fin='+fin);
+  const r = await api('GET','/flotte/admin/pleins'+(q.length?'?'+q.join('&'):'')).catch(()=>({pleins:[]}));
+  window._flottePleins = r.pleins||[];
+  const el=document.getElementById('fp-liste');
+  if(!window._flottePleins.length){ el.innerHTML='<p class="muted">Aucun plein sur cette période.</p>'; return; }
+  el.innerHTML = `<div class="table-wrap"><table><thead><tr><th>Date</th><th>Véhicule</th><th>Conducteur</th><th>Station</th><th>Montant</th><th>Litres</th><th>Carte</th><th>Ticket</th></tr></thead><tbody>
+    ${window._flottePleins.map(p=>{
+      const v=p.vehicules||{}; const carte=p.flotte_cartes_carburant;
+      const ticket = p.exception_sans_photo ? `<span class="pill" style="background:rgba(240,85,90,.15);color:var(--red)" title="${esc(p.exception_justification||'')}">⚠️ Sans photo</span>` : `<button class="btn btn-sm" onclick="flotteVoirTicket(${p.id})">📷 Voir</button>`;
+      return `<tr><td class="muted">${new Date(p.date_plein).toLocaleString('fr-FR')}</td><td><b>${esc(v.plaque||'?')}</b></td><td class="muted">${esc(p.conducteur_login)}</td><td class="muted">${esc(p.station)}</td><td><b>${parseFloat(p.montant_eur).toFixed(2)} €</b></td><td class="muted">${p.litres||'—'}</td><td class="muted">${carte?esc(carte.numero_masque):'—'}</td><td>${ticket}</td></tr>`;
+    }).join('')}
+  </tbody></table></div>`;
+}
+async function flotteVoirTicket(id){
+  const r = await api('GET','/flotte/pleins/'+id+'/photo-url').catch(()=>null);
+  if(!r || r.error || !r.url){ toast('❌ Photo indisponible'); return; }
+  window.open(r.url, '_blank');
+}
+function flotteExportCSV(){
+  const rows = window._flottePleins||[];
+  if(!rows.length){ toast('Rien à exporter'); return; }
+  const head=['Date','Véhicule','Conducteur','Station','Montant €','Litres','Km au plein','Carte','Sans photo','Justification exception'];
+  const csv=[head.join(';')].concat(rows.map(p=>{
+    const v=p.vehicules||{}; const carte=p.flotte_cartes_carburant;
+    return [new Date(p.date_plein).toLocaleString('fr-FR'), v.plaque||'', p.conducteur_login, p.station, parseFloat(p.montant_eur).toFixed(2), p.litres||'', p.km_au_plein||'', carte?carte.numero_masque:'', p.exception_sans_photo?'OUI':'NON', p.exception_justification||''].map(x=>'"'+String(x||'').replace(/"/g,'""')+'"').join(';');
+  })).join('\n');
+  const blob=new Blob(['﻿'+csv],{type:'text/csv;charset=utf-8'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a'); a.href=url; a.download='flotte_pleins.csv'; a.click();
+  URL.revokeObjectURL(url);
+}
+
+// ── Cartes carburant ──
+async function flotteRenderCartes(body){
+  const veh = await api('GET','/vehicules').catch(()=>({vehicules:[]}));
+  window._flotteVehiculesOptions = veh.vehicules||[];
+  body.innerHTML = `
+    <div class="card">
+      <div class="flex-between"><h3>💳 Cartes carburant</h3><button class="btn btn-green btn-sm" onclick="flotteAjouterCarte()">➕ Ajouter une carte</button></div>
+      <p class="muted" style="margin:12px 0 14px">Le numéro doit rester masqué (garde au maximum les 4 derniers chiffres, ex : **** **** **** 4821).</p>
+      <div id="fc-liste"><div class="loading"><div class="spin"></div></div></div>
+    </div>`;
+  flotteChargerCartes();
+}
+async function flotteChargerCartes(){
+  const r = await api('GET','/flotte/admin/cartes').catch(()=>({cartes:[]}));
+  const list=r.cartes||[];
+  const el=document.getElementById('fc-liste');
+  if(!list.length){ el.innerHTML='<p class="muted">Aucune carte enregistrée.</p>'; return; }
+  const statutLbl={active:['Active','var(--green)'],suspendue:['Suspendue','var(--orange)'],perdue:['Perdue','var(--red)'],retiree:['Retirée','var(--text2)']};
+  el.innerHTML = `<div class="table-wrap"><table><thead><tr><th>Numéro</th><th>Véhicule</th><th>Statut</th><th>Depuis</th><th></th></tr></thead><tbody>
+    ${list.map(c=>{
+      const [lbl,col]=statutLbl[c.statut]||['—','var(--text2)']; const v=c.vehicules;
+      return `<tr><td style="font-family:monospace">${esc(c.numero_masque)}</td><td class="muted">${v?esc(v.plaque):'—'}</td><td><span class="pill" style="background:${col}22;color:${col}">${lbl}</span></td><td class="muted">${c.date_attribution}</td>
+        <td><select class="inline-sel" onchange="flotteMajCarte(${c.id},this.value)"><option value="">Changer le statut…</option><option value="active">Active</option><option value="suspendue">Suspendue</option><option value="perdue">Perdue</option><option value="retiree">Retirée</option></select></td></tr>`;
+    }).join('')}
+  </tbody></table></div>`;
+}
+async function flotteAjouterCarte(){
+  const numero=prompt('Numéro masqué de la carte (ex: **** **** **** 4821) :'); if(!numero||!numero.trim()) return;
+  const options=(window._flotteVehiculesOptions||[]).map(v=>v.plaque).join(', ');
+  const plaque=prompt('Plaque du véhicule associé (laisser vide si aucun) — véhicules disponibles : '+options)||'';
+  const vehicule = (window._flotteVehiculesOptions||[]).find(v=>v.plaque.toUpperCase()===plaque.trim().toUpperCase());
+  const r = await api('POST','/flotte/admin/cartes', { numero_masque:numero.trim(), vehicule_id: vehicule?vehicule.id:undefined }).catch(e=>({error:e.message}));
+  if(r&&r.success){ toast('✅ Carte ajoutée'); flotteChargerCartes(); } else toast('❌ '+((r&&r.error)||'Erreur'));
+}
+async function flotteMajCarte(id, statut){
+  if(!statut) return;
+  const r = await api('PATCH','/flotte/admin/cartes/'+id, { statut }).catch(()=>null);
+  if(r&&r.success){ toast('✅ Statut mis à jour'); flotteChargerCartes(); } else toast('❌ Erreur');
+}
+
+// ── Alertes anti-fraude ──
+async function flotteRenderAlertes(body){
+  body.innerHTML = `
+    <div class="card">
+      <div class="flex-between"><h3>🚨 Alertes anti-fraude</h3>
+        <select id="fa-filtre" onchange="flotteChargerAlertes()" style="max-width:220px">
+          <option value="nouvelle" selected>Nouvelles</option>
+          <option value="en_cours">En cours</option>
+          <option value="traitee">Traitées</option>
+          <option value="ignoree">Ignorées</option>
+          <option value="">Toutes</option>
+        </select>
+      </div>
+      <div id="fa-liste" style="margin-top:14px"><div class="loading"><div class="spin"></div></div></div>
+    </div>`;
+  flotteChargerAlertes();
+}
+async function flotteChargerAlertes(){
+  const statut=document.getElementById('fa-filtre').value;
+  const r = await api('GET','/flotte/admin/alertes'+(statut?'?statut='+statut:'')).catch(()=>({alertes:[]}));
+  const list=r.alertes||[];
+  const el=document.getElementById('fa-liste');
+  if(!list.length){ el.innerHTML='<p class="muted">Aucune alerte.</p>'; return; }
+  const lbl={volume_superieur_reservoir:'Volume > réservoir',plusieurs_pleins_meme_jour:'Plusieurs pleins/jour',hors_plage_horaire:'Hors plage horaire',km_retour_incoherent:'Km retour incohérent',consommation_anormale:'Consommation anormale',plein_sans_photo:'Plein sans photo'};
+  el.innerHTML = `<div class="table-wrap"><table><thead><tr><th>Date</th><th>Type</th><th>Véhicule</th><th>Conducteur</th><th>Détail</th><th>Statut</th><th></th></tr></thead><tbody>
+    ${list.map(a=>{
+      const v=a.vehicules;
+      return `<tr><td class="muted">${new Date(a.date_detection).toLocaleString('fr-FR')}</td><td><b>${esc(lbl[a.type]||a.type)}</b></td><td class="muted">${v?esc(v.plaque):'—'}</td><td class="muted">${esc(a.conducteur_login||'—')}</td><td class="muted">${esc(a.detail||'')}</td><td class="muted">${esc(a.statut)}</td>
+        <td style="white-space:nowrap"><button class="btn btn-sm" title="Marquer traitée" onclick="flotteTraiterAlerte(${a.id},'traitee')">✅</button> <button class="btn btn-sm" title="Ignorer" onclick="flotteTraiterAlerte(${a.id},'ignoree')">🚫</button></td></tr>`;
+    }).join('')}
+  </tbody></table></div>`;
+}
+async function flotteTraiterAlerte(id, statut){
+  const commentaire = statut==='traitee' ? (prompt('Commentaire (optionnel) :')||'') : '';
+  const r = await api('PATCH','/flotte/admin/alertes/'+id, { statut, commentaire }).catch(()=>null);
+  if(r&&r.success){ toast('✅ Alerte mise à jour'); flotteChargerAlertes(); } else toast('❌ Erreur');
+}
+
+// ── Configuration du module (4 niveaux — cf. README) ──
+async function flotteRenderConfig(body){
+  const r = await api('GET','/flotte/admin/config').catch(()=>null);
+  if(!r){ body.innerHTML='<div class="card"><p class="err" style="display:block">Erreur de chargement</p></div>'; return; }
+  const cfg=r.config;
+  const champ=(cle,label,type,hint)=>`<div style="margin-bottom:14px"><label style="font-size:12px;font-weight:600;color:var(--text2);display:block;margin-bottom:4px">${label}</label><input id="fcfg-${cle}" type="${type}" value="${esc(cfg[cle])}" style="width:100%;max-width:260px">${hint?`<div class="muted" style="font-size:11px;margin-top:3px">${hint}</div>`:''}</div>`;
+  body.innerHTML = `
+    <div class="card" style="border:1px solid ${cfg.module_actif?'rgba(51,196,129,.4)':'rgba(240,85,90,.4)'}">
+      <h3 style="margin:0 0 8px">⚙️ Activation du module</h3>
+      <p class="muted" style="margin-bottom:12px">⚠️ Ce module suit l'activité des conducteurs (kilométrage, horodatage). <b>L'information préalable des salariés (et la consultation du CSE si applicable) est obligatoire avant activation</b> — RGPD, Code du travail art. L1222-4.</p>
+      <label style="display:flex;align-items:center;gap:10px;font-weight:700;cursor:pointer">
+        <input type="checkbox" id="fcfg-module_actif" ${cfg.module_actif?'checked':''} style="width:20px;height:20px">
+        Module actif (les conducteurs peuvent utiliser l'appli Flotte)
+      </label>
+    </div>
+    <div class="card">
+      <h3 style="margin:0 0 14px">Paramètres des alertes</h3>
+      ${champ('capacite_reservoir_defaut_l','Capacité réservoir par défaut (L)','number','Utilisé si le véhicule n’a pas sa capacité renseignée')}
+      ${champ('conso_ecart_tolere_pct','Écart de consommation toléré (%)','number','Avant déclenchement de l’alerte « consommation anormale »')}
+      ${champ('max_pleins_par_jour_vehicule','Nombre max. de pleins/jour/véhicule','number','Au-delà, alerte « plusieurs pleins le même jour »')}
+      ${champ('plage_horaire_debut','Début de la plage horaire habituelle','time','')}
+      ${champ('plage_horaire_fin','Fin de la plage horaire habituelle','time','')}
+    </div>
+    <div class="card">
+      <h3 style="margin:0 0 14px">Durées de conservation (RGPD)</h3>
+      ${champ('duree_conservation_pleins_ans','Pleins (photos + montants) — années','number','Aligné sur le délai de reprise fiscal — à valider avec le comptable')}
+      ${champ('duree_conservation_utilisations_ans','Utilisations (km, motif) — années','number','')}
+      ${champ('duree_conservation_alertes_mois','Alertes — mois','number','')}
+    </div>
+    <button class="btn btn-gold" onclick="flotteEnregistrerConfig()">💾 Enregistrer les paramètres</button>`;
+}
+async function flotteEnregistrerConfig(){
+  const cles=['capacite_reservoir_defaut_l','conso_ecart_tolere_pct','max_pleins_par_jour_vehicule','plage_horaire_debut','plage_horaire_fin','duree_conservation_pleins_ans','duree_conservation_utilisations_ans','duree_conservation_alertes_mois'];
+  const body={}; cles.forEach(c=>{ const el=document.getElementById('fcfg-'+c); if(el) body[c] = el.type==='number' ? parseFloat(el.value) : el.value; });
+  body.module_actif = document.getElementById('fcfg-module_actif').checked;
+  const r = await api('PATCH','/flotte/admin/config', body).catch(e=>({error:e.message}));
+  if(r&&r.success){ toast('✅ Configuration enregistrée'); flotteRenderConfig(document.getElementById('flotteBody')); } else toast('❌ '+((r&&r.error)||'Erreur'));
 }
 
 // ════════════════════════════════════════════════════════════════════════════

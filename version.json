@@ -1,7 +1,18 @@
 {
-  "version": "2026.07.04.53",
+  "version": "2026.07.04.54",
   "app": "AJCV Logistique",
   "historique": [
+    {
+      "v": "2026.07.04.54",
+      "date": "17/09/2026",
+      "titre": "Nouveau module Flotte : registre véhicules & carte carburant",
+      "notes": [
+        "🚗 Nouvelle appli conducteur (flotte.html) : prise/retour de véhicule avec kilométrage, déclaration de plein avec photo de ticket obligatoire (bucket privé), distinction trajet professionnel/mixte/personnel.",
+        "🛡️ Console admin — module Flotte enrichi : dashboard, historique des utilisations, suivi carburant (montants/litres/photos), gestion des cartes carburant, alertes anti-fraude, configuration des seuils.",
+        "🔒 Module désactivé par défaut (RGPD) : à activer explicitement dans Flotte → Configuration une fois l'information des salariés (et le CSE si applicable) faite.",
+        "⚠️ Nécessite d'exécuter sql/flotte_registre.sql dans Supabase (test) avant utilisation — voir le message de livraison pour le détail."
+      ]
+    },
     {
       "v": "2026.07.04.53",
       "date": "17/09/2026",
