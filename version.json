@@ -1,7 +1,22 @@
 {
-  "version": "2026.07.04.54",
+  "version": "2026.07.04.55",
   "app": "AJCV Logistique",
   "historique": [
+    {
+      "v": "2026.07.04.55",
+      "date": "17/09/2026",
+      "titre": "Retours client : refonte design + suivi fournisseur pour remboursement",
+      "notes": [
+        "🎨 Nouvelle interface façon Odoo (menu latéral, thème clair/sombre) au lieu de l'empilement de cartes.",
+        "📦 Nouveau : dossiers d'envoi fournisseur — regroupe plusieurs fiches reçues au dépôt vers un même fournisseur, avec statut (brouillon → envoyé → remboursé) et date de transmission. Fini de se demander \"j'ai transmis ou pas\".",
+        "🏢 Nouvel onglet Fournisseurs (fiche contact) + rattachement d'un fournisseur par défaut à chaque article du catalogue (import CSV avec colonne fournisseur optionnelle).",
+        "🔗 Le panier de déclaration regroupe désormais automatiquement les quantités si le même article est ajouté deux fois, au lieu de créer deux lignes.",
+        "📊 Reporting enrichi : vues par client et par commercial (en plus de par article), et indicateur \"transmis au fournisseur\" sur chaque fiche.",
+        "🐞 Documentation rétroactive de la table ret_commerciaux (jamais versionnée en SQL depuis sa création).",
+        "🐞 Correctif important : l'ajout/import d'articles au catalogue était bloqué depuis toujours (règle de sécurité de la base mal configurée) — jamais testé jusqu'ici car le catalogue initial avait été chargé autrement.",
+        "🐞 Correctif : le montant \"Remboursé à date\" de l'accueil ne comptait pas les dossiers entièrement remboursés."
+      ]
+    },
     {
       "v": "2026.07.04.54",
       "date": "17/09/2026",
