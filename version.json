@@ -1,7 +1,17 @@
 {
-  "version": "2026.07.04.55",
+  "version": "2026.07.04.56",
   "app": "AJCV Logistique",
   "historique": [
+    {
+      "v": "2026.07.04.56",
+      "date": "18/09/2026",
+      "titre": "Géocodage : les clients sans adresse précise (code postal seul) ont maintenant un GPS",
+      "notes": [
+        "🐞 Correctif important : un client avec uniquement un code postal (pas d'adresse ni de ville) ne recevait jamais de GPS — la zone n'était pas non plus détectée. Bloquant pour l'optimisation de tournée sur ces clients.",
+        "📍 Nouveau repli : quand l'adresse précise est absente ou introuvable, le client est placé au centre de sa commune (les ~40 codes postaux réunionnais sont tous couverts) plutôt que de n'avoir aucun GPS — approximatif mais largement suffisant pour l'optimisation, qui groupe déjà les arrêts par commune.",
+        "🔁 « Re-géocoder GPS manquants » (admin → Clients) traite désormais aussi ces cas et signale ceux en approximation, pour affiner plus tard si une vraie adresse est ajoutée."
+      ]
+    },
     {
       "v": "2026.07.04.55",
       "date": "17/09/2026",
