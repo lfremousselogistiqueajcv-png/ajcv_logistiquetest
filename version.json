@@ -1,7 +1,178 @@
 {
-  "version": "2026.07.04.56",
+  "version": "2026.07.04.75",
   "app": "AJCV Logistique",
   "historique": [
+    {
+      "v": "2026.07.04.75",
+      "date": "23/09/2026",
+      "titre": "KPI : le total colle enfin exactement à la somme des catégories",
+      "notes": [
+        "🐞 Une livraison déjà « Livrée »/« Non livrée » qui avait aussi été reportée un jour pouvait être comptée deux fois (Livrées + Reportées, ou En attente + Reportées) — chaque livraison n'appartient désormais qu'à une seule catégorie (priorité Livré > Non livré > Reporté > En attente), donc Livrées + Non livrées + Reportées + En attente = Total, toujours."
+      ]
+    },
+    {
+      "v": "2026.07.04.74",
+      "date": "23/09/2026",
+      "titre": "Clients : réattribution des zones sur les livraisons existantes",
+      "notes": [
+        "🎯 Nouveau bouton « Réattribuer les zones (livraisons) » (onglet Clients) : corrige la zone des livraisons déjà créées dont la zone est vide ou obsolète (surtout les anciennes) — jusqu'ici, corriger la zone d'un client ne mettait pas à jour ses livraisons déjà enregistrées.",
+        "ℹ️ Explique le nombre élevé de livraisons en zone « — » vu dans le KPI (majoritairement de vieilles livraisons)."
+      ]
+    },
+    {
+      "v": "2026.07.04.73",
+      "date": "23/09/2026",
+      "titre": "Correctifs KPI : plusieurs totaux du tableau de bord étaient faux",
+      "notes": [
+        "🐞 Le filtre de date du KPI excluait une bonne partie des livraisons du dernier jour de la période (surtout visible sur « Aujourd'hui ») — même correctif que celui déjà appliqué à Livraisons/Planning/Pointage.",
+        "🐞 Le tableau « Par zone » éclatait une même zone en plusieurs lignes selon le libellé exact enregistré — regroupé maintenant sur les 4 zones, comme « Par livreur ».",
+        "🐞 Le compteur « En attente » ne comptait presque jamais les livraisons réellement « à livrer » (comparaison sans l'emoji) — corrigé, et les « À rappeler » y sont désormais inclus.",
+        "🐞 Le compteur « Reportées » restait bloqué à 0 pour les livraisons reportées via le bouton 📅 (aucune trace posée) — un marqueur est maintenant enregistré à chaque report.",
+        "⚠️ Nécessite d'exécuter sql/livraisons_reportee.sql dans Supabase (test, puis prod à la promotion)."
+      ]
+    },
+    {
+      "v": "2026.07.04.72",
+      "date": "22/09/2026",
+      "titre": "Bordereau PDF : photos des chèques en annexe",
+      "notes": [
+        "📷 Le PDF du bordereau inclut maintenant une annexe avec la photo de chaque chèque (une par page, avec client/BL/montant/n° en légende) — plus besoin d'ouvrir chaque photo séparément.",
+        "ℹ️ Les photos restent uniquement dans le PDF (l'export Excel, en texte, ne peut pas les inclure)."
+      ]
+    },
+    {
+      "v": "2026.07.04.71",
+      "date": "22/09/2026",
+      "titre": "Bordereau : export PDF et Excel",
+      "notes": [
+        "🖨️ Bouton PDF : document complet (période, livreur, résumé par mode de règlement, détail ligne par ligne, cases signature « Remis par / Reçu par »), même identité visuelle que les bons de réception.",
+        "📊 Bouton Excel : classeur avec un onglet Résumé et un onglet Détail, prêt pour la comptabilité."
+      ]
+    },
+    {
+      "v": "2026.07.04.70",
+      "date": "22/09/2026",
+      "titre": "Bordereau : message d'erreur explicite",
+      "notes": [
+        "🔍 Correctif technique : l'onglet Bordereau affichait un message générique « Erreur de chargement » sans détail — il affiche maintenant le message d'erreur réel pour pouvoir diagnostiquer."
+      ]
+    },
+    {
+      "v": "2026.07.04.69",
+      "date": "22/09/2026",
+      "titre": "Photo du chèque à la livraison + bordereau de remise",
+      "notes": [
+        "📷 Livreur : quand le règlement récupéré est un chèque, une photo du chèque est désormais obligatoire (comme le n° de chèque) — elle part avec le reste du bon de réception.",
+        "💰 Nouvel onglet Bordereau (admin) : pour un livreur et une période donnés, le nombre de livraisons, les totaux par mode de règlement (espèces, chèques...), et le détail des chèques (numéro + photo) — prêt pour la remise à la comptabilité. Export CSV inclus.",
+        "⚠️ Nécessite d'exécuter sql/cheques_photos.sql dans Supabase (test, puis prod à la promotion)."
+      ]
+    },
+    {
+      "v": "2026.07.04.68",
+      "date": "21/09/2026",
+      "titre": "Articles : modification possible (libellé, prix, fournisseur...)",
+      "notes": [
+        "✏️ Un bouton sur chaque ligne du catalogue (onglet Articles) permet de modifier le libellé, le code-barres, la catégorie, le prix d'achat et le fournisseur rattaché — jusqu'ici un article ne pouvait être créé qu'une fois, jamais corrigé."
+      ]
+    },
+    {
+      "v": "2026.07.04.67",
+      "date": "21/09/2026",
+      "titre": "Dossiers fournisseur : message plus précis quand rien n'apparaît",
+      "notes": [
+        "🔍 « Nouveau dossier d'envoi » : le message quand aucune fiche ne s'affiche indique désormais si c'est parce qu'aucun article n'est rattaché à ce fournisseur (à corriger dans l'onglet Articles), ou parce qu'aucune fiche n'a encore été réceptionnée au dépôt pour lui."
+      ]
+    },
+    {
+      "v": "2026.07.04.66",
+      "date": "21/09/2026",
+      "titre": "Correctif : génération du document fournisseur (photos) disparue à la refonte",
+      "notes": [
+        "🐞 Depuis la refonte Retours, le bouton qui génère le document imprimable (synthèse par article + photos) pour un fournisseur avait disparu de l'écran — le backend n'avait jamais bougé, seul le bouton manquait. Restauré : bouton « 📦 Générer le document (photos) » dans le détail d'un dossier fournisseur.",
+        "🐞 Correctif technique : un plantage silencieux pouvait survenir sur l'Accueil si on changeait d'onglet pendant le chargement des indicateurs."
+      ]
+    },
+    {
+      "v": "2026.07.04.65",
+      "date": "21/09/2026",
+      "titre": "Pointage/Congés : choisir qui est suivi",
+      "notes": [
+        "👥 Nouveau bouton « Qui gérer » dans l'onglet Pointage : coche les salariés dont tu gères le pointage — seuls ceux-là apparaissent désormais dans Pointage et Congés (avant, tous les comptes actifs s'affichaient).",
+        "⚠️ Nécessite d'exécuter sql/pointage_gere.sql dans Supabase (test, puis prod) — tant que ce n'est pas fait, personne n'apparaît dans ces deux onglets (comportement normal, il faudra cocher les salariés concernés après)."
+      ]
+    },
+    {
+      "v": "2026.07.04.64",
+      "date": "21/09/2026",
+      "titre": "Correctif : le filtre de plage de dates (Livraisons) ne filtrait pas",
+      "notes": [
+        "🐞 Onglet Livraisons, champ « au » (plusieurs jours) : le serveur ignorait la plage envoyée par la page et renvoyait toutes les livraisons sans filtre de date. Corrigé — la plage est maintenant bien appliquée."
+      ]
+    },
+    {
+      "v": "2026.07.04.63",
+      "date": "21/09/2026",
+      "titre": "Pointage : heure d'entrée/sortie + pause déjeuner",
+      "notes": [
+        "⏱️ La saisie d'un pointage se fait maintenant avec de vrais horaires (ex : 09h-12h puis 13h-16h) au lieu d'un simple nombre d'heures — clique sur une case du jour pour ouvrir la saisie.",
+        "🧮 Le total est calculé automatiquement (sortie − entrée − pause déjeuner) et affiché en direct pendant la saisie.",
+        "⚠️ Nécessite d'exécuter sql/pointage_horaires.sql dans Supabase, en plus de sql/pointage_jours.sql et sql/soldes_conges.sql (test, puis prod)."
+      ]
+    },
+    {
+      "v": "2026.07.04.62",
+      "date": "21/09/2026",
+      "titre": "Nouvel onglet Congés : soldes CP et RTT par salarié",
+      "notes": [
+        "🏖️ Nouvel onglet Congés : saisis le solde de congés payés et de RTT acquis par chaque salarié (d'après la paie). Les jours pris sont comptés automatiquement à partir des congés posés dans le Planning, avec le restant en direct.",
+        "⚠️ Nécessite d'exécuter sql/soldes_conges.sql dans Supabase (test, puis prod à la promotion)."
+      ]
+    },
+    {
+      "v": "2026.07.04.61",
+      "date": "21/09/2026",
+      "titre": "Pointage : saisie jour par jour + heures sup automatiques",
+      "notes": [
+        "⏱️ L'onglet Pointage passe d'une saisie « total semaine » à une grille jour par jour (comme le Planning) — plus fidèle à la fiche papier de chacun.",
+        "⚠️ Heures sup calculées automatiquement au-delà d'un seuil hebdomadaire, réglable directement dans l'écran (35h par défaut).",
+        "⚠️ Nécessite d'exécuter sql/pointage_jours.sql dans Supabase (test, puis prod à la promotion) — la table de la version précédente (pointage_heures) reste en base, inutilisée, sans risque."
+      ]
+    },
+    {
+      "v": "2026.07.04.60",
+      "date": "21/09/2026",
+      "titre": "Nouvel onglet Pointage + congés dans le Planning",
+      "notes": [
+        "⏱️ Nouvel onglet Pointage : saisis chaque semaine le total d'heures relevé sur la fiche papier de chaque salarié (+ commentaire optionnel), avec un récap sur une période au choix (mois, trimestre...) et export CSV.",
+        "🏖️ Planning : 5 nouveaux motifs de congé (Congé payé, RTT, Maladie, Sans solde, Autre absence), affichés en orange et distincts des missions — sélectionner un congé bascule automatiquement la mission sur la journée entière.",
+        "⚠️ Nécessite d'exécuter sql/pointage_conges.sql dans Supabase (test, puis prod à la promotion)."
+      ]
+    },
+    {
+      "v": "2026.07.04.59",
+      "date": "19/09/2026",
+      "titre": "Flotte : sélection du véhicule en tuiles carrées",
+      "notes": [
+        "🚐 Écran « Prendre un véhicule » : les véhicules disponibles s'affichent désormais en tuiles carrées (icône, plaque, modèle) plutôt qu'en liste, comme dans les autres applis à sélection par carte."
+      ]
+    },
+    {
+      "v": "2026.07.04.58",
+      "date": "19/09/2026",
+      "titre": "Flotte : design harmonisé avec le reste de la suite AJCV",
+      "notes": [
+        "🎨 Écran de connexion avec le vrai logo AJCV (au lieu d'une icône provisoire), mode clair/sombre (bouton en bas à gauche) et badge de version avec « Nouveautés » — comme les applis Livreur et Préparateur.",
+        "🖼️ En-tête retravaillé (avatar, boutons) pour une présentation plus soignée. Aucun changement de fonctionnement."
+      ]
+    },
+    {
+      "v": "2026.07.04.57",
+      "date": "19/09/2026",
+      "titre": "Flotte : bouton retour au menu AJCV",
+      "notes": [
+        "🏠 Correctif : l'appli Flotte n'avait pas le bouton flottant de retour au menu AJCV, présent sur toutes les autres applis."
+      ]
+    },
     {
       "v": "2026.07.04.56",
       "date": "18/09/2026",

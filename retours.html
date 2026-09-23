@@ -167,6 +167,25 @@ html[data-theme="light"]{
 
 <div class="toast" id="toast"></div>
 
+<!-- MODALE : modifier un article -->
+<div class="modal-bg" id="modalEditArticle">
+  <div class="modal">
+    <h3>✏️ Modifier l'article</h3>
+    <div class="form-grid">
+      <input id="ea-lib" placeholder="Libellé *">
+      <input id="ea-cb" placeholder="Code-barres">
+      <input id="ea-cat" placeholder="Catégorie">
+      <input id="ea-px" placeholder="Prix d'achat (ex: 4,50)">
+      <select id="ea-fourn"><option value="">— Fournisseur —</option></select>
+    </div>
+    <div class="err" id="eaErr"></div>
+    <div class="form-actions">
+      <button class="btn btn-gray" onclick="fermerModal('modalEditArticle')">Annuler</button>
+      <button class="btn btn-gold" onclick="enregistrerArticle()">✅ Enregistrer</button>
+    </div>
+  </div>
+</div>
+
 <!-- MODALE : nouveau dossier fournisseur -->
 <div class="modal-bg" id="modalNouveauDossier">
   <div class="modal">
@@ -278,7 +297,8 @@ async function renderAccueil(){
     const d=await api('GET','/retours/mes').catch(()=>({fiches:[]}));
     const F=d.fiches||[];
     const enCours=F.filter(f=>!['livre','refuse'].includes(f.statut)).length;
-    $('acc-kpis').innerHTML=`<div class="card"><div class="kpi-grid">
+    const zoneKpi=$('acc-kpis'); if(!zoneKpi) return; // page quittée pendant le chargement
+    zoneKpi.innerHTML=`<div class="card"><div class="kpi-grid">
       ${kpiTuile(F.length,'Fiches déclarées')}${kpiTuile(enCours,'En cours','var(--blue)')}
     </div></div>`;
     return;
@@ -292,7 +312,8 @@ async function renderAccueil(){
   const nonTransmis=F.filter(f=>f.recu_le&&!f.dossier_numero&&f.statut!=='refuse').length;
   const dossiersOuverts=dossiers.filter(d=>d.statut!=='clos'&&d.statut!=='rembourse_total').length;
   const montantAttendu=dossiers.filter(d=>['rembourse_partiel','rembourse_total'].includes(d.statut)).reduce((s,d)=>s+(d.montant_rembourse||0),0);
-  $('acc-kpis').innerHTML=`<div class="card"><div class="kpi-grid">
+  const zoneKpi=$('acc-kpis'); if(!zoneKpi) return; // page quittée pendant le chargement
+  zoneKpi.innerHTML=`<div class="card"><div class="kpi-grid">
     ${kpiTuile(F.length,'Fiches (total)')}
     ${kpiTuile(enAttenteReception,'En attente dépôt',enAttenteReception?'var(--orange)':'var(--green)')}
     ${kpiTuile(nonTransmis,'Reçues, pas encore transmises',nonTransmis?'var(--red)':'var(--green)')}
@@ -579,7 +600,12 @@ async function chargerCandidatsDossier(){
   $('nd-candidats').innerHTML='<div class="loading"><div class="spin"></div></div>';
   const d=await api('GET','/retours/dossiers-fournisseur/candidats?fournisseur_id='+fid);
   const F=d.fiches||[];
-  if(!F.length){$('nd-candidats').innerHTML='<p class="muted">Aucune fiche reçue au dépôt en attente pour ce fournisseur.</p>';return}
+  if(!F.length){
+    const msg=d.raison==='aucun_article'
+      ?'Aucun article du catalogue n’est rattaché à ce fournisseur — vérifie l’onglet Articles (colonne fournisseur).'
+      :'Aucune fiche reçue au dépôt en attente pour ce fournisseur — réceptionne-les d’abord dans l’onglet Réception dépôt.';
+    $('nd-candidats').innerHTML='<p class="muted">'+msg+'</p>';return
+  }
   $('nd-candidats').innerHTML=`<p class="muted" style="margin-bottom:8px">${F.length} fiche(s) disponible(s) — coche celles à inclure :</p>
     <div style="max-height:280px;overflow-y:auto">${F.map(f=>`<label style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border)">
       <input type="checkbox" class="nd-cb" value="${f.id}" checked>
@@ -595,16 +621,19 @@ async function creerDossier(){
   toast('✅ Dossier '+r.dossier.numero+' créé ('+ids.length+' fiches)');
   fermerModal('modalNouveauDossier');chargerDossiers();
 }
+let _dossierFichesCourant=[];
 async function ouvrirDossierDetail(id){
   const d=await api('GET','/retours/dossiers-fournisseur/'+id);
   if(d.error){toast('❌ '+d.error);return}
   const dos=d.dossier, st=STDOSS[dos.statut]||[dos.statut,'#888'];
+  _dossierFichesCourant=d.fiches||[];
   let bg=document.getElementById('dossDet');if(bg)bg.remove();
   bg=document.createElement('div');bg.id='dossDet';bg.className='modal-bg active';
   bg.innerHTML=`<div class="modal" style="max-width:640px">
     <div class="flex-between"><h3 style="margin:0">${esc(dos.numero)} <span class="pill" style="background:${st[1]}22;color:${st[1]}">${st[0]}</span></h3><button class="btn btn-gray btn-sm" onclick="document.getElementById('dossDet').remove()">✕</button></div>
     <p class="muted" style="margin:10px 0">Fournisseur : <b style="color:var(--text)">${esc(dos.fournisseurs?dos.fournisseurs.nom:'—')}</b>${dos.fournisseurs&&dos.fournisseurs.contact_email?' · '+esc(dos.fournisseurs.contact_email):''}${dos.date_envoi?' · Transmis le '+new Date(dos.date_envoi).toLocaleDateString('fr-FR')+' par '+esc(dos.envoye_par||''):' · Pas encore transmis'}</p>
-    <h4 style="font-size:13px;color:var(--gold);margin-bottom:8px">Regroupement par article</h4>
+    <div class="flex-between" style="margin-bottom:8px"><h4 style="font-size:13px;color:var(--gold);margin:0">Regroupement par article</h4>
+      <button class="btn btn-green btn-sm" onclick="genererDocumentDossier()">📦 Générer le document (photos)</button></div>
     <div class="table-wrap"><table><thead><tr><th>Réf.</th><th>Article</th><th>Qté totale</th><th>Fiches</th></tr></thead><tbody>
       ${(d.regroupement||[]).map(a=>`<tr><td><b>${esc(a.ref_odoo)}</b></td><td>${esc(a.libelle)}</td><td><b>${a.qte}</b></td><td class="muted">${a.fiches.map(esc).join(', ')}</td></tr>`).join('')}
     </tbody></table></div>
@@ -644,6 +673,13 @@ async function cloturerDossier(id){
   const r=await api('PATCH','/retours/dossiers-fournisseur/'+id+'/cloturer',{});
   if(r.error){toast('❌ '+r.error);return}
   toast('🔒 Dossier clos');document.getElementById('dossDet').remove();chargerDossiers();
+}
+function genererDocumentDossier(){
+  const F=_dossierFichesCourant;
+  if(!F.length){toast('Aucune fiche dans ce dossier');return}
+  if(F.length>40){toast('40 fiches max par document (là : '+F.length+')');return}
+  toast('📦 Génération du document ('+F.length+' fiches)…');
+  window.open(API+'/retours/dossier?ids='+F.map(f=>f.id).join(',')+'&t='+encodeURIComponent(S.token),'_blank');
 }
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -751,15 +787,45 @@ function importerCSV(input){
 }
 let _t=null;
 function rechDebounce(){clearTimeout(_t);_t=setTimeout(()=>rechercher($('rech').value),250)}
+let _articlesCourants=[];
 async function rechercher(q){
   try{
     const d=await api('GET','/retours/articles?q='+encodeURIComponent(q||''));
     if(d.error){$('rech-res').innerHTML='<p class="err" style="display:block">'+esc(d.error)+'</p>';return}
     const A=d.articles||[];
-    $('rech-res').innerHTML=A.length?'<div class="table-wrap"><table><thead><tr><th>Réf.</th><th>Libellé</th><th>Code-barres</th><th>Catégorie</th><th>PA</th><th>Fournisseur</th></tr></thead><tbody>'+
-      A.map(a=>'<tr><td><b>'+esc(a.ref_odoo)+'</b></td><td>'+esc(a.libelle)+'</td><td>'+esc(a.code_barre||'—')+'</td><td>'+esc(a.categorie||'—')+'</td><td>'+(a.prix_achat!=null?Number(a.prix_achat).toFixed(2)+' €':'—')+'</td><td>'+esc(a.fournisseurs?a.fournisseurs.nom:'—')+'</td></tr>').join('')+
+    _articlesCourants=A;
+    $('rech-res').innerHTML=A.length?'<div class="table-wrap"><table><thead><tr><th>Réf.</th><th>Libellé</th><th>Code-barres</th><th>Catégorie</th><th>PA</th><th>Fournisseur</th><th></th></tr></thead><tbody>'+
+      A.map((a,i)=>'<tr><td><b>'+esc(a.ref_odoo)+'</b></td><td>'+esc(a.libelle)+'</td><td>'+esc(a.code_barre||'—')+'</td><td>'+esc(a.categorie||'—')+'</td><td>'+(a.prix_achat!=null?Number(a.prix_achat).toFixed(2)+' €':'—')+'</td><td>'+esc(a.fournisseurs?a.fournisseurs.nom:'—')+'</td><td><button class="btn btn-gray btn-sm" onclick="ouvrirEditArticle('+i+')">✏️</button></td></tr>').join('')+
       '</tbody></table></div>':'<p class="muted">Aucun article'+(q?' pour « '+esc(q)+' »':' — importe ton CSV ci-dessus')+'.</p>';
   }catch(e){}
+}
+let _articleEnEditionId=null;
+function ouvrirEditArticle(i){
+  const a=_articlesCourants[i]; if(!a)return;
+  _articleEnEditionId=a.id;
+  $('eaErr').style.display='none';
+  $('ea-lib').value=a.libelle||'';
+  $('ea-cb').value=a.code_barre||'';
+  $('ea-cat').value=a.categorie||'';
+  $('ea-px').value=a.prix_achat!=null?a.prix_achat:'';
+  $('ea-fourn').innerHTML='<option value="">— Fournisseur —</option>'+_fournisseurs.map(f=>`<option value="${f.id}" ${a.fournisseur_id===f.id?'selected':''}>${esc(f.nom)}</option>`).join('');
+  $('modalEditArticle').classList.add('active');
+}
+async function enregistrerArticle(){
+  const err=$('eaErr'); err.style.display='none';
+  const libelle=$('ea-lib').value.trim();
+  if(!libelle){err.textContent='Libellé requis';err.style.display='block';return}
+  const pxRaw=$('ea-px').value.trim();
+  const body={
+    libelle, code_barre:$('ea-cb').value.trim(), categorie:$('ea-cat').value.trim(),
+    prix_achat:pxRaw?parseFloat(pxRaw.replace(',','.')):null,
+    fournisseur_id:$('ea-fourn').value||null,
+  };
+  const r=await api('PATCH','/retours/articles/'+_articleEnEditionId,body);
+  if(r.error){err.textContent=r.error;err.style.display='block';return}
+  toast('✅ Article mis à jour');
+  fermerModal('modalEditArticle');
+  rechercher($('rech').value);
 }
 
 // ════════════════════════════════════════════════════════════════════════════

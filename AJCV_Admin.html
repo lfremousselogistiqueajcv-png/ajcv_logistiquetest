@@ -198,8 +198,11 @@ html[data-theme="light"]{
       <div class="nav-tab" data-tab="odoo" onclick="go('odoo')">🔄<span>Imports Odoo</span></div>
       <div class="side-group">Équipe</div>
       <div class="nav-tab" data-tab="planning" onclick="go('planning')">🗓️<span>Planning</span></div>
+      <div class="nav-tab" data-tab="pointage" onclick="go('pointage')">⏱️<span>Pointage</span></div>
+      <div class="nav-tab" data-tab="conges" onclick="go('conges')">🏖️<span>Congés</span></div>
       <div class="side-group">Pilotage</div>
       <div class="nav-tab" data-tab="kpi" onclick="go('kpi')">📊<span>KPI</span></div>
+      <div class="nav-tab" data-tab="bordereau" onclick="go('bordereau')">💰<span>Bordereau</span></div>
       <div class="nav-tab" data-tab="docs" onclick="go('docs')">📄<span>Documents</span></div>
       <div class="side-group">Administration</div>
       <div class="nav-tab" data-tab="users" onclick="go('users')">🔐<span>Utilisateurs</span></div>
@@ -383,7 +386,7 @@ html[data-theme="light"]{
     <h3 id="pl-titre">➕ Nouvelle mission</h3>
     <div class="form-grid">
       <div><label>Personne *</label><select id="pl-personne"></select></div>
-      <div><label>Tâche *</label><select id="pl-tache"></select></div>
+      <div><label>Tâche *</label><select id="pl-tache" onchange="_planningTacheChange()"></select></div>
       <div><label>Date *</label><input type="date" id="pl-date"></div>
       <div></div>
       <div><label>Début *</label><input type="time" id="pl-debut"></div>
@@ -395,6 +398,52 @@ html[data-theme="light"]{
       <button class="btn btn-red" id="pl-del" style="display:none;margin-right:auto" onclick="supprimerPlanning()">🗑️ Supprimer</button>
       <button class="btn btn-gray" onclick="fermerModal('modalPlanning')">Annuler</button>
       <button class="btn btn-green" onclick="enregistrerPlanning()">✅ Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-bg" id="modalPointageJour">
+  <div class="modal">
+    <h3 id="pj-titre">⏱️ Pointage du jour</h3>
+    <div class="form-grid">
+      <div><label>Heure d'entrée *</label><input type="time" id="pj-entree" oninput="_majTotalPointageJour()"></div>
+      <div><label>Heure de sortie *</label><input type="time" id="pj-sortie" oninput="_majTotalPointageJour()"></div>
+      <div><label>Pause déjeuner - début</label><input type="time" id="pj-pause-debut" oninput="_majTotalPointageJour()"></div>
+      <div><label>Pause déjeuner - fin</label><input type="time" id="pj-pause-fin" oninput="_majTotalPointageJour()"></div>
+    </div>
+    <p class="muted" id="pj-total" style="margin:10px 0;font-size:14px"></p>
+    <div class="err" id="pjErr"></div>
+    <div class="form-actions">
+      <button class="btn btn-red" id="pj-del" style="display:none;margin-right:auto" onclick="supprimerPointageJour()">🗑️ Supprimer</button>
+      <button class="btn btn-gray" onclick="fermerModal('modalPointageJour')">Annuler</button>
+      <button class="btn btn-green" onclick="enregistrerPointageJour()">✅ Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-bg" id="modalQuiGerer">
+  <div class="modal">
+    <h3>👥 Qui gérer</h3>
+    <p class="muted" style="margin-bottom:10px">Coche les salariés dont tu gères le pointage et les congés — les autres n'apparaîtront pas dans ces onglets.</p>
+    <div id="quiGererCorps" style="display:flex;flex-direction:column;gap:8px;max-height:50vh;overflow-y:auto"></div>
+    <div class="form-actions">
+      <button class="btn btn-gray" onclick="fermerModal('modalQuiGerer')">Fermer</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-bg" id="modalRecapPointage">
+  <div class="modal">
+    <h3>📊 Récap des heures</h3>
+    <div class="form-grid">
+      <div><label>Du</label><input type="date" id="rp-debut"></div>
+      <div><label>Au</label><input type="date" id="rp-fin"></div>
+    </div>
+    <div style="margin:10px 0"><button class="btn btn-gray btn-sm" onclick="chargerRecapPointage()">🔍 Afficher</button></div>
+    <div id="recapPointageCorps"></div>
+    <div class="form-actions">
+      <button class="btn btn-gray" onclick="exportRecapPointageCSV()">⬇️ Export CSV</button>
+      <button class="btn btn-gray" onclick="fermerModal('modalRecapPointage')">Fermer</button>
     </div>
   </div>
 </div>
@@ -532,12 +581,15 @@ function go(tab){
   else if(tab==='docs') renderDocs();
   else if(tab==='flotte') renderFlotte();
   else if(tab==='kpi') renderKPI();
+  else if(tab==='bordereau') renderBordereau();
   else if(tab==='odoo') renderImportsOdoo();
   else if(tab==='zones') renderZones();
   else if(tab==='chargement') renderChargements();
   else if(tab==='maint') renderMaintenance();
   else if(tab==='journal') renderJournal();
   else if(tab==='planning') renderPlanning();
+  else if(tab==='pointage') renderPointage();
+  else if(tab==='conges') renderConges();
 }
 
 // ── ACCUEIL ────────────────────────────────────────────────────────────────
@@ -561,10 +613,13 @@ function renderAccueil(){
     ]},
     {label:'Équipe', items:[
       ['🗓️','Planning','planning','Missions de la semaine, par personne'],
+      ['⏱️','Pointage','pointage','Heures hebdomadaires et récap par salarié'],
+      ['🏖️','Congés','conges','Soldes CP et RTT par salarié'],
     ]},
     {label:'Pilotage', items:[
       ['📊','KPI','kpi','Tableaux de bord et statistiques'],
       ['📄','Documents','docs','Bons de réception et signatures'],
+      ['💰','Bordereau','bordereau','Règlements récupérés par les livreurs, pour la compta'],
     ]},
     {label:'Administration', items:[
       ['🔐','Utilisateurs','users','Comptes, rôles, casquettes'],
@@ -1422,7 +1477,7 @@ async function confirmerReport(){
   if(!nv){ err.textContent='Choisis une date.'; err.style.display='block'; return; }
   const btn=document.getElementById('rp-ok'); if(btn){ btn.disabled=true; btn.textContent='⏳…'; }
   try{
-    const r=await api('PATCH','/livraisons/id/'+_reportId,{date_livraison:nv});
+    const r=await api('PATCH','/livraisons/id/'+_reportId,{date_livraison:nv,reportee:true});
     if(r&&r.success){
       fermerModal('modalReport');
       const [y,m,d]=nv.split('-');
@@ -1856,6 +1911,7 @@ async function renderClients(){
           <button class="btn btn-blue btn-sm" onclick="geocoderClients()">🌍 Géocoder GPS manquants</button>
           <button class="btn btn-sm" onclick="regeocoderTout()" title="Corrige aussi les clients mal placés (mauvaise commune)">🔁 Re-géocoder TOUT</button>
           <button class="btn btn-blue btn-sm" onclick="attribuerZones()">🎯 Réattribuer les zones (CP)</button>
+          <button class="btn btn-blue btn-sm" onclick="attribuerZonesLivraisons()" title="Corrige les livraisons dont la zone n'a jamais été renseignée ou ne correspond plus (surtout les anciennes)">🎯 Réattribuer les zones (livraisons)</button>
         </div></div>
       <input id="cl-search" placeholder="🔍 Rechercher un client, une ville ou un ID Odoo..." oninput="filtrerClients(true)" style="margin-bottom:8px;margin-top:12px">
       <select id="cl-zone" onchange="filtrerClients(true)" style="margin-bottom:14px">
@@ -2222,6 +2278,13 @@ async function attribuerZones(){
   if(r&&r.success){toast('✅ '+r.updated+' zone(s) mises à jour — dont '+(r.corrected||0)+' corrigée(s)');_clients=null;renderClients();}
   else toast('❌ '+((r&&r.error)||'Erreur'));
 }
+async function attribuerZonesLivraisons(){
+  if(!confirm('Réattribuer la zone des LIVRAISONS dont la zone est vide ou ne correspond plus (Nord/Sud/Est/Ouest) ?\n\nPeut prendre un peu de temps si la base est grosse (surtout les vieilles livraisons).')) return;
+  toast('⏳ Attribution en cours… (peut prendre un moment)');
+  const r=await api('POST','/admin/assign-zones-livraisons',{}).catch(()=>null);
+  if(r&&r.success) toast('✅ '+r.updated+' livraison(s) corrigée(s) sur '+r.total+' — '+r.skipped+' déjà bonnes/ignorées');
+  else toast('❌ '+((r&&r.error)||'Erreur'));
+}
 
 async function changerZoneClient(id,zone){
   const r=await api('PATCH','/clients/id/'+id,{zone}).catch(()=>null);
@@ -2454,9 +2517,16 @@ function _renderPlanningGrille(){
           ${jours.map(j=>{
             const items=parPersonneJour[u.login+'|'+j]||[];
             return `<td style="vertical-align:top;cursor:pointer" onclick="ouvrirPlanning(null,'${u.login}','${j}')">
-              ${items.map(it=>`<div onclick="event.stopPropagation();ouvrirPlanning('${it.id}')" style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:5px 7px;margin-bottom:4px;font-size:11.5px;cursor:pointer" title="Cliquer pour modifier">
-                ${(it.taches_types&&it.taches_types.icone)||'📋'} <b>${(it.taches_types&&esc(it.taches_types.nom))||'?'}</b><br>${it.heure_debut.slice(0,5)}–${it.heure_fin.slice(0,5)}${it.commentaire?'<br><span class="muted">'+esc(it.commentaire)+'</span>':''}
-              </div>`).join('')}
+              ${items.map(it=>{
+                const estConge=it.taches_types&&it.taches_types.categorie==='conge';
+                const style=estConge
+                  ?'background:rgba(230,126,34,.14);border:1px solid rgba(230,126,34,.4);border-radius:8px;padding:5px 7px;margin-bottom:4px;font-size:11.5px;cursor:pointer'
+                  :'background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:5px 7px;margin-bottom:4px;font-size:11.5px;cursor:pointer';
+                const horaire=estConge?'':`<br>${it.heure_debut.slice(0,5)}–${it.heure_fin.slice(0,5)}`;
+                return `<div onclick="event.stopPropagation();ouvrirPlanning('${it.id}')" style="${style}" title="Cliquer pour modifier">
+                ${(it.taches_types&&it.taches_types.icone)||'📋'} <b>${(it.taches_types&&esc(it.taches_types.nom))||'?'}</b>${horaire}${it.commentaire?'<br><span class="muted">'+esc(it.commentaire)+'</span>':''}
+              </div>`;
+              }).join('')}
               <div class="muted" style="font-size:16px;text-align:center;opacity:.4">+</div>
             </td>`;
           }).join('')}
@@ -2473,7 +2543,10 @@ function ouvrirPlanning(id,personne,date){
   document.getElementById('plErr').style.display='none';
   const selP=document.getElementById('pl-personne'), selT=document.getElementById('pl-tache');
   selP.innerHTML=_planning.users.map(u=>`<option value="${u.login}">${esc(u.prenom)} ${esc(u.nom||'')} (${esc(u.role)})</option>`).join('');
-  selT.innerHTML=_planning.types.map(t=>`<option value="${t.id}">${t.icone} ${esc(t.nom)}</option>`).join('');
+  const missions=_planning.types.filter(t=>t.categorie!=='conge'), conges=_planning.types.filter(t=>t.categorie==='conge');
+  selT.innerHTML=
+    (missions.length?`<optgroup label="Missions">${missions.map(t=>`<option value="${t.id}">${t.icone} ${esc(t.nom)}</option>`).join('')}</optgroup>`:'')+
+    (conges.length?`<optgroup label="Congés">${conges.map(t=>`<option value="${t.id}">${t.icone} ${esc(t.nom)}</option>`).join('')}</optgroup>`:'');
   const item=id?_planning.items.find(x=>String(x.id)===String(id)):null;
   document.getElementById('modalPlanning').dataset.editId=item?item.id:'';
   document.getElementById('pl-titre').textContent=item?'✏️ Modifier la mission':'➕ Nouvelle mission';
@@ -2485,6 +2558,14 @@ function ouvrirPlanning(id,personne,date){
   document.getElementById('pl-tache').value=item?item.tache_id:(_planning.types[0]&&_planning.types[0].id)||'';
   document.getElementById('pl-commentaire').value=item?(item.commentaire||''):'';
   document.getElementById('modalPlanning').classList.add('active');
+  _planningTacheChange();
+}
+function _planningTacheChange(){
+  const t=_planning.types.find(x=>String(x.id)===document.getElementById('pl-tache').value);
+  const estConge=t&&t.categorie==='conge';
+  const debut=document.getElementById('pl-debut'), fin=document.getElementById('pl-fin');
+  if(estConge){ debut.value='00:00'; fin.value='23:59'; debut.disabled=true; fin.disabled=true; }
+  else { debut.disabled=false; fin.disabled=false; if(debut.value==='00:00'&&fin.value==='23:59'){ debut.value='08:00'; fin.value='12:00'; } }
 }
 async function enregistrerPlanning(){
   const err=document.getElementById('plErr'); err.style.display='none';
@@ -2509,6 +2590,247 @@ async function supprimerPlanning(){
   const r=await api('DELETE','/planning/'+id).catch(()=>null);
   if(r&&r.success){ fermerModal('modalPlanning'); toast('🗑️ Mission supprimée'); _chargerSemainePlanning(); }
   else toast('❌ Erreur');
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// ONGLET POINTAGE (sql/pointage_jours.sql) — heures saisies JOUR PAR JOUR par le
+// responsable, relevées depuis la fiche papier remplie par chaque salarié.
+// Heures sup calculées automatiquement au-delà d'un seuil hebdo paramétrable.
+// ════════════════════════════════════════════════════════════════════════════
+const _pointage={ weekStart:_isoJ(_lundiDe(new Date())), users:null, rows:{}, seuil:35 };
+async function renderPointage(){
+  document.getElementById('content').innerHTML='<div class="loading"><div class="spin"></div></div>';
+  if(!_pointage.users){
+    const [du,dc]=await Promise.all([api('GET','/admin/users').catch(()=>({users:[]})),api('GET','/pointage/config').catch(()=>({config:null}))]);
+    _pointage.users=(du.users||[]).filter(u=>u.actif&&u.pointage_gere);
+    _pointage.usersAll=(du.users||[]).filter(u=>u.actif);
+    _pointage.seuil=(dc.config&&dc.config.seuil_hebdo_heures)||35;
+  }
+  await _chargerSemainePointage();
+}
+function _joursSemainePointage(){ const d0=new Date(_pointage.weekStart+'T00:00:00'); return Array.from({length:7},(_,i)=>{const d=new Date(d0);d.setDate(d.getDate()+i);return _isoJ(d);}); }
+async function _chargerSemainePointage(){
+  const jours=_joursSemainePointage();
+  const r=await api('GET','/pointage?debut='+jours[0]+'&fin='+jours[6]).catch(()=>({pointages:[]}));
+  _pointage.fallback=!!r.fallback;
+  _pointage.rows={}; (r.pointages||[]).forEach(p=>{ _pointage.rows[p.personne+'|'+p.date_jour]=p; });
+  _renderPointageGrille();
+}
+function _semaineLabelPointage(){
+  const jours=_joursSemainePointage();
+  const f=(iso)=>{const d=new Date(iso+'T00:00:00');return d.toLocaleDateString('fr-FR',{day:'2-digit',month:'short'});};
+  return 'Semaine du '+f(jours[0])+' au '+f(jours[6]);
+}
+function _renderPointageGrille(){
+  const jours=_joursSemainePointage();
+  const users=_pointage.users;
+  document.getElementById('content').innerHTML=`
+    <div class="card">
+      <div class="flex-between">
+        <h3 style="margin:0">⏱️ Pointage des heures</h3>
+        <div style="display:flex;gap:8px;align-items:center">
+          <button class="btn btn-gray btn-sm" onclick="_changerSemainePointage(-1)">◀</button>
+          <b>${_semaineLabelPointage()}</b>
+          <button class="btn btn-gray btn-sm" onclick="_changerSemainePointage(1)">▶</button>
+          <button class="btn btn-gray btn-sm" onclick="_changerSemainePointage(0)">Aujourd'hui</button>
+          <button class="btn btn-gold btn-sm" style="margin-left:10px" onclick="ouvrirRecapPointage()">📊 Récap</button>
+          <button class="btn btn-gray btn-sm" onclick="ouvrirQuiGerer()">👥 Qui gérer</button>
+        </div>
+      </div>
+      ${_pointage.fallback?'<p class="muted" style="background:rgba(230,126,34,.1);padding:8px 10px;border-radius:8px;margin-top:10px">⚠️ Pointage pas encore actif (migration sql/pointage_jours.sql + sql/pointage_horaires.sql + sql/pointage_gere.sql à exécuter dans Supabase).</p>':''}
+      ${(!_pointage.fallback&&!users.length)?'<p class="muted" style="background:rgba(78,139,240,.1);padding:8px 10px;border-radius:8px;margin-top:10px">ℹ️ Aucun salarié suivi ici pour le moment — clique « 👥 Qui gérer » pour choisir qui apparaît.</p>':''}
+      <p class="muted" style="margin:10px 0 4px">Clique sur une case pour saisir l'entrée, la sortie et la pause déjeuner de chacun. Seuil heures sup :
+        <input type="number" id="pSeuil" value="${_pointage.seuil}" min="0" step="0.5" style="width:60px;display:inline-block" onchange="_majSeuilPointage()"> h / semaine
+      </p>
+      <div class="table-wrap" style="margin-top:10px"><table>
+        <thead><tr><th style="min-width:130px">Personne</th>${jours.map(j=>{const d=new Date(j+'T00:00:00');return `<th style="min-width:90px">${_JOURS[(d.getDay()+6)%7].slice(0,3)}<br><span class="muted" style="font-weight:400">${d.toLocaleDateString('fr-FR',{day:'2-digit',month:'short'})}</span></th>`;}).join('')}<th style="min-width:90px">Total</th></tr></thead>
+        <tbody>${users.length?users.map(u=>{
+          let total=0;
+          const cells=jours.map(j=>{
+            const p=_pointage.rows[u.login+'|'+j]; const v=p?parseFloat(p.heures):0; total+=v;
+            const h=(t)=>t?t.slice(0,5):'';
+            const contenu=p
+              ?`${h(p.heure_entree)}–${h(p.heure_sortie)}${p.pause_debut&&p.pause_fin?`<br><span class="muted" style="font-size:10px">pause ${h(p.pause_debut)}-${h(p.pause_fin)}</span>`:''}<br><b>${v.toFixed(2)} h</b>`
+              :`<span class="muted" style="font-size:16px">+</span>`;
+            return `<td style="cursor:pointer;text-align:center;font-size:11.5px" onclick="ouvrirPointageJour('${u.login}','${j}')" title="Cliquer pour saisir">${contenu}</td>`;
+          }).join('');
+          const depasse=total>_pointage.seuil;
+          return `<tr>
+            <td><b>${esc(u.prenom)} ${esc(u.nom||'')}</b><br><span class="muted" style="font-size:11px">${esc(u.role)}</span></td>
+            ${cells}
+            <td><b style="${depasse?'color:var(--orange)':''}">${total.toFixed(2)} h</b>${depasse?`<br><span class="muted" style="font-size:10.5px;color:var(--orange)">+${(total-_pointage.seuil).toFixed(2)} h sup</span>`:''}</td>
+          </tr>`;
+        }).join(''):'<tr><td colspan="9" class="muted" style="text-align:center">Aucun utilisateur actif</td></tr>'}</tbody>
+      </table></div>
+    </div>`;
+}
+function _changerSemainePointage(delta){
+  if(delta===0){ _pointage.weekStart=_isoJ(_lundiDe(new Date())); }
+  else { const d=new Date(_pointage.weekStart+'T00:00:00'); d.setDate(d.getDate()+delta*7); _pointage.weekStart=_isoJ(d); }
+  _chargerSemainePointage();
+}
+
+// ── Modale de saisie horaires (entrée / sortie / pause déjeuner) ──
+function ouvrirPointageJour(login,jour){
+  document.getElementById('pjErr').style.display='none';
+  const p=_pointage.rows[login+'|'+jour];
+  const m=document.getElementById('modalPointageJour');
+  m.dataset.login=login; m.dataset.jour=jour;
+  const d=new Date(jour+'T00:00:00');
+  document.getElementById('pj-titre').textContent='⏱️ Pointage — '+esc(login)+' — '+d.toLocaleDateString('fr-FR',{weekday:'long',day:'2-digit',month:'long'});
+  document.getElementById('pj-entree').value=p?(p.heure_entree||'').slice(0,5):'08:00';
+  document.getElementById('pj-sortie').value=p?(p.heure_sortie||'').slice(0,5):'17:00';
+  document.getElementById('pj-pause-debut').value=p?(p.pause_debut||'').slice(0,5):'12:00';
+  document.getElementById('pj-pause-fin').value=p?(p.pause_fin||'').slice(0,5):'13:00';
+  document.getElementById('pj-del').style.display=p?'inline-block':'none';
+  _majTotalPointageJour();
+  m.classList.add('active');
+}
+function _minutesDepuisMinuit(hhmm){ if(!hhmm) return null; const [h,mn]=hhmm.split(':').map(Number); return h*60+mn; }
+function _majTotalPointageJour(){
+  const e=_minutesDepuisMinuit(document.getElementById('pj-entree').value);
+  const s=_minutesDepuisMinuit(document.getElementById('pj-sortie').value);
+  const pd=_minutesDepuisMinuit(document.getElementById('pj-pause-debut').value);
+  const pf=_minutesDepuisMinuit(document.getElementById('pj-pause-fin').value);
+  let total=null;
+  if(e!=null&&s!=null&&s>e){ total=s-e; if(pd!=null&&pf!=null&&pf>pd) total-=(pf-pd); }
+  document.getElementById('pj-total').innerHTML = total!=null&&total>0 ? 'Total : <b style="color:var(--text)">'+(total/60).toFixed(2)+' h</b>' : '';
+}
+async function enregistrerPointageJour(){
+  const err=document.getElementById('pjErr'); err.style.display='none';
+  const m=document.getElementById('modalPointageJour');
+  const body={
+    personne:m.dataset.login, date_jour:m.dataset.jour,
+    heure_entree:document.getElementById('pj-entree').value,
+    heure_sortie:document.getElementById('pj-sortie').value,
+    pause_debut:document.getElementById('pj-pause-debut').value||undefined,
+    pause_fin:document.getElementById('pj-pause-fin').value||undefined,
+  };
+  if(!body.heure_entree||!body.heure_sortie){ err.textContent="Heure d'entrée et de sortie requises"; err.style.display='block'; return; }
+  if(body.heure_sortie<=body.heure_entree){ err.textContent="L'heure de sortie doit être après l'entrée"; err.style.display='block'; return; }
+  if((body.pause_debut&&!body.pause_fin)||(!body.pause_debut&&body.pause_fin)){ err.textContent='Renseigne le début ET la fin de la pause, ou aucun des deux'; err.style.display='block'; return; }
+  const r=await api('POST','/pointage',body).catch(e=>({error:e.message}));
+  if(r&&r.success){ fermerModal('modalPointageJour'); _pointage.rows[m.dataset.login+'|'+m.dataset.jour]=r.data; _renderPointageGrille(); }
+  else { err.textContent=(r&&r.error)||'Erreur'; err.style.display='block'; }
+}
+async function supprimerPointageJour(){
+  const m=document.getElementById('modalPointageJour');
+  if(!confirm('Supprimer ce pointage ?')) return;
+  const r=await api('DELETE','/pointage/'+m.dataset.login+'/'+m.dataset.jour).catch(()=>null);
+  if(r&&r.success){ fermerModal('modalPointageJour'); delete _pointage.rows[m.dataset.login+'|'+m.dataset.jour]; _renderPointageGrille(); }
+  else toast('❌ Erreur');
+}
+async function _majSeuilPointage(){
+  const v=parseFloat(document.getElementById('pSeuil').value);
+  if(isNaN(v)||v<0) return;
+  _pointage.seuil=v;
+  const r=await api('PATCH','/pointage/config',{seuil_hebdo_heures:v}).catch(()=>null);
+  if(r&&r.success) toast('✅ Seuil mis à jour');
+  _renderPointageGrille();
+}
+
+// ── Qui gérer (salariés suivis en Pointage / Congés) ──
+function ouvrirQuiGerer(){
+  const users=_pointage.usersAll||[];
+  document.getElementById('quiGererCorps').innerHTML = users.length ? users.map(u=>`
+    <label style="display:flex;align-items:center;gap:10px;padding:8px 10px;border:1px solid var(--border);border-radius:8px;cursor:pointer">
+      <input type="checkbox" ${u.pointage_gere?'checked':''} style="width:18px;height:18px" onchange="_toggleQuiGerer('${u.login}',this.checked)">
+      <span><b>${esc(u.prenom)} ${esc(u.nom||'')}</b> <span class="muted" style="font-size:11px">(${esc(u.role)})</span></span>
+    </label>`).join('') : '<p class="muted">Aucun utilisateur actif.</p>';
+  document.getElementById('modalQuiGerer').classList.add('active');
+}
+async function _toggleQuiGerer(login,checked){
+  const r=await api('PATCH','/admin/users/'+login,{pointage_gere:checked}).catch(()=>null);
+  if(r&&r.success){
+    const u=(_pointage.usersAll||[]).find(x=>x.login===login); if(u) u.pointage_gere=checked;
+    _pointage.users=(_pointage.usersAll||[]).filter(x=>x.pointage_gere);
+    _conges.users=null; // forcera un rechargement à jour au prochain passage sur l'onglet Congés
+    toast('✅ Mis à jour');
+    _renderPointageGrille();
+    ouvrirQuiGerer();
+  } else toast('❌ Erreur');
+}
+
+// ── Récap des heures sur une période ──
+let _recapPointage=[];
+function ouvrirRecapPointage(){
+  const d=new Date(), debutMois=new Date(d.getFullYear(),d.getMonth(),1);
+  document.getElementById('rp-debut').value=_isoJ(debutMois);
+  document.getElementById('rp-fin').value=_isoJ(d);
+  document.getElementById('recapPointageCorps').innerHTML='';
+  document.getElementById('modalRecapPointage').classList.add('active');
+  chargerRecapPointage();
+}
+async function chargerRecapPointage(){
+  const debut=document.getElementById('rp-debut').value, fin=document.getElementById('rp-fin').value;
+  const r=await api('GET','/pointage?debut='+debut+'&fin='+fin).catch(()=>({pointages:[]}));
+  const parPersonne={};
+  (r.pointages||[]).forEach(p=>{ parPersonne[p.personne]=(parPersonne[p.personne]||0)+parseFloat(p.heures); });
+  _recapPointage=(_pointage.users||[]).map(u=>({login:u.login,nom:(u.prenom+' '+(u.nom||'')).trim(),role:u.role,heures:parPersonne[u.login]||0}));
+  document.getElementById('recapPointageCorps').innerHTML=`
+    <div class="table-wrap"><table><thead><tr><th>Personne</th><th>Rôle</th><th>Total heures</th></tr></thead>
+    <tbody>${_recapPointage.map(x=>`<tr><td>${esc(x.nom)}</td><td class="muted">${esc(x.role)}</td><td><b>${x.heures.toFixed(2)} h</b></td></tr>`).join('')}</tbody></table></div>`;
+}
+function exportRecapPointageCSV(){
+  if(!_recapPointage.length){ toast('Rien à exporter'); return; }
+  const head=['Personne','Rôle','Total heures'];
+  const csv=[head.join(';')].concat(_recapPointage.map(x=>[x.nom,x.role,x.heures.toFixed(2)].map(v=>'"'+String(v||'').replace(/"/g,'""')+'"').join(';'))).join('\n');
+  const blob=new Blob(['﻿'+csv],{type:'text/csv;charset=utf-8'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a'); a.href=url; a.download='recap_heures.csv'; a.click();
+  URL.revokeObjectURL(url);
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// ONGLET CONGÉS (sql/soldes_conges.sql) — soldes CP et RTT par salarié.
+// Le solde acquis est saisi par le responsable (issu de la paie) ; les jours
+// pris sont comptés automatiquement depuis les congés posés dans le Planning.
+// ════════════════════════════════════════════════════════════════════════════
+const _conges={ users:null };
+async function renderConges(){
+  document.getElementById('content').innerHTML='<div class="loading"><div class="spin"></div></div>';
+  if(!_conges.users){
+    const du=await api('GET','/admin/users').catch(()=>({users:[]}));
+    _conges.users=(du.users||[]).filter(u=>u.actif&&u.pointage_gere);
+  }
+  const r=await api('GET','/soldes-conges').catch(()=>({soldes:[],pris:{}}));
+  _conges.fallback=!!r.fallback;
+  _conges.soldes={}; (r.soldes||[]).forEach(s=>{ _conges.soldes[s.personne+'|'+s.type]=s.solde_initial; });
+  _conges.pris=r.pris||{};
+  _renderCongesGrille();
+}
+function _renderCongesGrille(){
+  const users=_conges.users;
+  document.getElementById('content').innerHTML=`
+    <div class="card">
+      <h3 style="margin:0">🏖️ Soldes de congés</h3>
+      ${_conges.fallback?'<p class="muted" style="background:rgba(230,126,34,.1);padding:8px 10px;border-radius:8px;margin-top:10px">⚠️ Soldes pas encore actifs (migration sql/soldes_conges.sql à exécuter dans Supabase).</p>':''}
+      <p class="muted" style="margin:10px 0">Solde acquis saisi à la main (d'après la paie) ; jours pris comptés automatiquement depuis les congés posés dans le Planning.</p>
+      <div class="table-wrap" style="margin-top:10px"><table>
+        <thead><tr><th style="min-width:130px">Personne</th><th colspan="3">Congés payés</th><th colspan="3">RTT</th></tr>
+        <tr><th></th><th>Acquis</th><th>Pris</th><th>Restant</th><th>Acquis</th><th>Pris</th><th>Restant</th></tr></thead>
+        <tbody>${users.length?users.map(u=>{
+          const cpAcquis=_conges.soldes[u.login+'|cp']||0, cpPris=_conges.pris[u.login+'|cp']||0, cpRestant=cpAcquis-cpPris;
+          const rttAcquis=_conges.soldes[u.login+'|rtt']||0, rttPris=_conges.pris[u.login+'|rtt']||0, rttRestant=rttAcquis-rttPris;
+          return `<tr>
+            <td><b>${esc(u.prenom)} ${esc(u.nom||'')}</b><br><span class="muted" style="font-size:11px">${esc(u.role)}</span></td>
+            <td><input type="number" min="0" step="0.5" value="${cpAcquis||''}" id="sc-${u.login}-cp" style="width:64px" onchange="_saisirSoldeConge('${u.login}','cp')"></td>
+            <td class="muted">${cpPris} j</td>
+            <td><b style="${cpRestant<0?'color:var(--red)':''}">${cpRestant.toFixed(1)} j</b></td>
+            <td><input type="number" min="0" step="0.5" value="${rttAcquis||''}" id="sc-${u.login}-rtt" style="width:64px" onchange="_saisirSoldeConge('${u.login}','rtt')"></td>
+            <td class="muted">${rttPris} j</td>
+            <td><b style="${rttRestant<0?'color:var(--red)':''}">${rttRestant.toFixed(1)} j</b></td>
+          </tr>`;
+        }).join(''):'<tr><td colspan="7" class="muted" style="text-align:center">Aucun utilisateur actif</td></tr>'}</tbody>
+      </table></div>
+    </div>`;
+}
+async function _saisirSoldeConge(login,type){
+  const v=document.getElementById('sc-'+login+'-'+type).value;
+  if(v===''){ return; }
+  const r=await api('PATCH','/soldes-conges',{personne:login,type,solde_initial:v}).catch(e=>({error:e.message}));
+  if(r&&r.success){ _conges.soldes[login+'|'+type]=parseFloat(v); _renderCongesGrille(); }
+  else toast('❌ '+((r&&r.error)||'Erreur'));
 }
 
 // ── Référentiel des types de tâches (paramétrable par le responsable) ──
@@ -2617,6 +2939,203 @@ async function testerEmail(){
   }else{
     alert('❌ L\'email ne fonctionne pas.\n\nErreur : '+((r&&r.error)||'inconnue')+'\n\nCauses fréquentes :\n• EMAIL_PASS incorrect (régénérez le mot de passe d\'application Gmail)\n• Railway bloque le port SMTP\n• La 2FA Gmail n\'est pas activée');
   }
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// BORDEREAU DE REMISE (sql/cheques_photos.sql) — règlements récupérés par les
+// livreurs à la livraison (espèces, chèques...), pour la remise à la compta.
+// ════════════════════════════════════════════════════════════════════════════
+const _bordereau={ livreurs:null };
+async function renderBordereau(){
+  document.getElementById('content').innerHTML='<div class="loading"><div class="spin"></div></div>';
+  if(!_bordereau.livreurs){
+    const d=await api('GET','/admin/users').catch(()=>({users:[]}));
+    _bordereau.livreurs=(d.users||[]).filter(u=>u.actif&&(u.peut_livrer||u.role==='Livreur'));
+  }
+  const today=new Date().toISOString().split('T')[0];
+  document.getElementById('content').innerHTML=`
+    <div class="card">
+      <h3>💰 Bordereau de remise</h3>
+      <p class="muted" style="margin-bottom:10px">Règlements (espèces, chèques...) récupérés par les livreurs à la livraison — pour la remise à la compta.</p>
+      <div class="form-grid">
+        <div><label>Livreur</label><select id="bd-livreur"><option value="">Tous</option>${_bordereau.livreurs.map(u=>`<option value="${esc(u.prenom)}">${esc(u.prenom)} ${esc(u.nom||'')}</option>`).join('')}</select></div>
+        <div><label>Du</label><input type="date" id="bd-debut" value="${today}"></div>
+        <div><label>Au</label><input type="date" id="bd-fin" value="${today}"></div>
+      </div>
+      <div class="form-actions" style="justify-content:flex-start">
+        <button class="btn btn-gold btn-sm" onclick="genererBordereau()">🔍 Générer</button>
+        <button class="btn btn-gray btn-sm" onclick="genererBordereauPDF()">🖨️ PDF</button>
+        <button class="btn btn-gray btn-sm" onclick="exporterBordereauExcel()">📊 Excel</button>
+      </div>
+      <div id="bordereauCorps" style="margin-top:16px"></div>
+    </div>`;
+  genererBordereau();
+}
+let _bordereauData=[], _bordereauNbTotal=0;
+async function genererBordereau(){
+  const livreur=document.getElementById('bd-livreur').value;
+  const debut=document.getElementById('bd-debut').value;
+  const fin=document.getElementById('bd-fin').value;
+  const zone=document.getElementById('bordereauCorps');
+  zone.innerHTML='<div class="loading"><div class="spin"></div></div>';
+  const q='/livraisons/bordereau?'+(livreur?'livreur='+encodeURIComponent(livreur)+'&':'')+'debut='+debut+'&fin='+fin;
+  const r=await api('GET',q).catch(e=>({error:e.message}));
+  if(!r||r.error){ zone.innerHTML='<p class="muted">❌ '+esc((r&&r.error)||'Erreur de chargement (réseau)')+'</p>'; return; }
+  _bordereauData=r.reglements||[];
+  _bordereauNbTotal=r.nb_livraisons_total||0;
+  const totaux={};
+  _bordereauData.forEach(x=>{ totaux[x.reglement]=(totaux[x.reglement]||0)+(parseFloat(x.montant)||0); });
+  zone.innerHTML=`
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px">
+      <div class="kpi"><b>${r.nb_livraisons_total}</b><span>Livraisons (période/livreur)</span></div>
+      <div class="kpi"><b>${_bordereauData.length}</b><span>Avec règlement</span></div>
+      ${Object.entries(totaux).map(([mode,tot])=>`<div class="kpi"><b>${tot.toFixed(2)} €</b><span>${esc(mode)}</span></div>`).join('')}
+    </div>
+    <h4 style="font-size:13px;color:var(--gold);margin-bottom:8px">Détail</h4>
+    <div class="table-wrap"><table><thead><tr><th>Date</th><th>Livreur</th><th>Client</th><th>BL</th><th>Règlement</th><th>Montant</th><th>N° chèque</th><th></th></tr></thead><tbody>
+      ${_bordereauData.length?_bordereauData.map(x=>`<tr><td>${esc(x.date_heure||new Date(x.created_at).toLocaleDateString('fr-FR'))}</td><td>${esc(x.livreur)}</td><td>${esc(x.client)}</td><td>${esc(x.bl||'—')}</td><td>${esc(x.reglement)}</td><td>${x.montant!=null?Number(x.montant).toFixed(2)+' €':'—'}</td><td>${esc(x.cheque_num||'—')}</td><td>${x.cheque_photo_path?`<button class="btn btn-gray btn-sm" onclick="voirPhotoCheque('${x.id}')">📷</button>`:''}</td></tr>`).join(''):'<tr><td colspan="8" class="muted" style="text-align:center">Aucun règlement sur cette période</td></tr>'}
+    </tbody></table></div>`;
+}
+async function voirPhotoCheque(id){
+  const r=await api('GET','/livraisons/signature/'+id+'/cheque-photo-url').catch(()=>null);
+  if(!r||!r.url){toast('❌ Photo introuvable');return}
+  window.open(r.url,'_blank');
+}
+function _bordereauFiltreLabel(){
+  const sel=document.getElementById('bd-livreur');
+  const livreurLbl=sel&&sel.selectedIndex>=0?sel.options[sel.selectedIndex].textContent:'Tous';
+  const debut=document.getElementById('bd-debut').value, fin=document.getElementById('bd-fin').value;
+  const f=(iso)=>{ if(!iso) return '—'; const [y,m,d]=iso.split('-'); return d+'/'+m+'/'+y; };
+  return { livreurLbl, debutTxt:f(debut), finTxt:f(fin), debut, fin };
+}
+function exporterBordereauExcel(){
+  if(!window.XLSX){ toast('Excel non chargé'); return; }
+  const { livreurLbl, debutTxt, finTxt } = _bordereauFiltreLabel();
+  const totaux={};
+  _bordereauData.forEach(x=>{ totaux[x.reglement]=(totaux[x.reglement]||0)+(parseFloat(x.montant)||0); });
+  const resume=[
+    ['Bordereau de remise — AJCV Logistique'],
+    ['Période', debutTxt+' au '+finTxt],
+    ['Livreur', livreurLbl],
+    ['Généré le', new Date().toLocaleString('fr-FR')],
+    [],
+    ['Livraisons sur la période', _bordereauNbTotal],
+    ['Dont avec règlement récupéré', _bordereauData.length],
+    ...Object.entries(totaux).map(([mode,tot])=>[mode, Number(tot.toFixed(2))]),
+  ];
+  const detailHead=['Date','Livreur','Client','BL','Règlement','Montant (€)','N° chèque'];
+  const detail=[detailHead, ..._bordereauData.map(x=>[
+    x.date_heure||new Date(x.created_at).toLocaleDateString('fr-FR'), x.livreur||'', x.client||'', x.bl||'—',
+    x.reglement||'', x.montant!=null?Number(x.montant):null, x.cheque_num||'—',
+  ])];
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(resume), 'Résumé');
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(detail), 'Détail');
+  XLSX.writeFile(wb, 'Bordereau_remise_'+debutTxt.replace(/\//g,'-')+'_au_'+finTxt.replace(/\//g,'-')+'.xlsx');
+  toast('📊 Excel généré');
+}
+async function _chequePhotoDataUrl(id){
+  try{
+    const r=await api('GET','/livraisons/signature/'+id+'/cheque-photo-url');
+    if(!r||!r.url) return null;
+    const blob=await (await fetch(r.url)).blob();
+    return await new Promise(res=>{ const fr=new FileReader(); fr.onload=()=>res(fr.result); fr.onerror=()=>res(null); fr.readAsDataURL(blob); });
+  }catch(_){ return null; }
+}
+async function genererBordereauPDF(){
+  if(!window.jspdf){ toast('jsPDF non chargé'); return; }
+  const { jsPDF } = window.jspdf;
+  const chequesAvecPhoto=_bordereauData.filter(x=>x.reglement==='Chèque'&&x.cheque_photo_path);
+  if(chequesAvecPhoto.length) toast('⏳ Récupération des photos de chèques…');
+  const photos=await Promise.all(chequesAvecPhoto.map(async x=>({ x, dataUrl: await _chequePhotoDataUrl(x.id) })));
+  const doc = new jsPDF({unit:'mm',format:'a4'});
+  const W=210, H=297, M=18, col2=110;
+  const { livreurLbl, debutTxt, finTxt } = _bordereauFiltreLabel();
+  const genLabel = new Date().toLocaleString('fr-FR');
+  let y=20, page=1;
+  const cols=[[M,'Date',22],[M+24,'Livreur',24],[M+50,'Client',40],[M+92,'BL',18],[M+112,'Mode',22],[M+136,'Montant',20],[M+158,'N° chèque',30]];
+  function entete(){
+    y=20;
+    doc.setTextColor(26,35,50); doc.setFont('helvetica','bold'); doc.setFontSize(20);
+    doc.text('BORDEREAU DE REMISE — AJCV', M, y); y+=6;
+    doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(110,110,110);
+    doc.text('Service Logistique · 82C Rue Raphaël Babet · 97480 Saint-Joseph, La Réunion', M, y); y+=6;
+    doc.setDrawColor(255,179,0); doc.setLineWidth(0.8); doc.line(M,y,W-M,y); y+=10;
+  }
+  function pied(){
+    doc.setFontSize(7); doc.setTextColor(150,150,150);
+    doc.text('AJCV Service Logistique · Document généré automatiquement le '+genLabel+' · Page '+page, M, H-10);
+  }
+  function enteteTableau(){
+    doc.setFontSize(7.5); doc.setTextColor(140,140,140); doc.setFont('helvetica','bold');
+    cols.forEach(([x,label])=>doc.text(label,x,y));
+    y+=4; doc.setDrawColor(220,220,220); doc.setLineWidth(0.2); doc.line(M,y,W-M,y); y+=4.5;
+    doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(40,40,40);
+  }
+  entete();
+  doc.setFontSize(8); doc.setTextColor(140,140,140); doc.setFont('helvetica','bold');
+  doc.text('PÉRIODE & LIVREUR', M, y); y+=6;
+  doc.setFontSize(11); doc.setTextColor(26,35,50); doc.setFont('helvetica','bold');
+  doc.text('Du '+debutTxt+' au '+finTxt+'   —   Livreur : '+livreurLbl, M, y); y+=10;
+
+  doc.setFontSize(8); doc.setTextColor(140,140,140); doc.setFont('helvetica','bold');
+  doc.text('RÉSUMÉ', M, y); y+=6;
+  const totaux={};
+  _bordereauData.forEach(x=>{ totaux[x.reglement]=(totaux[x.reglement]||0)+(parseFloat(x.montant)||0); });
+  doc.setFontSize(10); doc.setTextColor(26,35,50); doc.setFont('helvetica','normal');
+  doc.text('Livraisons sur la période : '+_bordereauNbTotal, M, y); y+=6;
+  doc.text('Dont avec règlement récupéré : '+_bordereauData.length, M, y); y+=6;
+  Object.entries(totaux).forEach(([mode,tot])=>{ doc.text(mode+' : '+tot.toFixed(2)+' €', M, y); y+=6; });
+  y+=3; doc.setDrawColor(220,220,220); doc.setLineWidth(0.3); doc.line(M,y,W-M,y); y+=8;
+
+  doc.setFontSize(8); doc.setTextColor(140,140,140); doc.setFont('helvetica','bold');
+  doc.text('DÉTAIL DES RÈGLEMENTS', M, y); y+=6;
+  enteteTableau();
+  if(!_bordereauData.length){ doc.setFont('helvetica','italic'); doc.setFontSize(9); doc.text('Aucun règlement sur cette période.', M, y); y+=6; }
+  _bordereauData.forEach(x=>{
+    if(y>H-30){ pied(); doc.addPage(); page++; entete(); enteteTableau(); }
+    const dateTxt=(x.date_heure||new Date(x.created_at).toLocaleDateString('fr-FR')).slice(0,16);
+    const row=[dateTxt, x.livreur||'', x.client||'', x.bl||'—', x.reglement||'', x.montant!=null?Number(x.montant).toFixed(2)+' €':'—', x.cheque_num||'—'];
+    cols.forEach(([cx,,w],i)=>{ doc.text(doc.splitTextToSize(String(row[i]),w-2)[0]||'', cx, y); });
+    y+=5.5;
+  });
+
+  y+=12;
+  if(y>H-45){ pied(); doc.addPage(); page++; entete(); y+=6; }
+  doc.setDrawColor(200,200,200); doc.setLineWidth(0.3);
+  doc.line(M, y+16, M+70, y+16);
+  doc.line(col2, y+16, col2+70, y+16);
+  doc.setFontSize(8); doc.setTextColor(110,110,110); doc.setFont('helvetica','normal');
+  doc.text('Remis par (livreur / responsable)', M, y+21);
+  doc.text('Reçu par (comptabilité)', col2, y+21);
+  pied();
+
+  // ANNEXE — photos des chèques (une par page, pour rester lisible)
+  const photosOk=photos.filter(p=>p.dataUrl);
+  photosOk.forEach(({x,dataUrl},i)=>{
+    doc.addPage(); page++; entete();
+    doc.setFontSize(8); doc.setTextColor(140,140,140); doc.setFont('helvetica','bold');
+    doc.text('ANNEXE — PHOTO DU CHÈQUE ('+(i+1)+'/'+photosOk.length+')', M, y); y+=7;
+    doc.setFontSize(10); doc.setTextColor(26,35,50); doc.setFont('helvetica','bold');
+    doc.text((x.client||'—')+'   —   BL '+(x.bl||'—')+'   —   '+(x.montant!=null?Number(x.montant).toFixed(2)+' €':'—')+'   —   N° '+(x.cheque_num||'—'), M, y); y+=8;
+    try{
+      const maxW=W-2*M, maxH=H-y-25;
+      const dims=doc.getImageProperties(dataUrl);
+      let w=maxW, h=w*dims.height/dims.width;
+      if(h>maxH){ h=maxH; w=h*dims.width/dims.height; }
+      doc.addImage(dataUrl,'JPEG',M,y,w,h);
+    }catch(_){ doc.setFont('helvetica','italic'); doc.setFontSize(9); doc.text('Photo illisible.', M, y); }
+    pied();
+  });
+  if(chequesAvecPhoto.length && !photosOk.length){
+    doc.addPage(); page++; entete();
+    doc.setFont('helvetica','italic'); doc.setFontSize(9); doc.setTextColor(150,150,150);
+    doc.text('Photos des chèques indisponibles (erreur réseau).', M, y);
+    pied();
+  }
+
+  doc.save('Bordereau_remise_'+debutTxt.replace(/\//g,'-')+'_au_'+finTxt.replace(/\//g,'-')+'.pdf');
+  toast('🖨️ PDF généré');
 }
 
 async function renderDocs(){
