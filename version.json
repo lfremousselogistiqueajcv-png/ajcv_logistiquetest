@@ -1,7 +1,23 @@
 {
-  "version": "2026.07.04.78",
+  "version": "2026.07.04.80",
   "app": "AJCV Logistique",
   "historique": [
+    {
+      "v": "2026.07.04.80",
+      "date": "23/09/2026",
+      "titre": "Portail : design premium (menu principal)",
+      "notes": [
+        "🎨 Le vrai écran de démarrage — le portail avec les tuiles Livreur/Préparateur/Carte/Retours/Flotte/Production CBD/Administration — passe en design premium : relief plus marqué au survol, dégradé lumineux sur les icônes, flèche qui apparaît au survol, séparateurs de section avec ligne. Toujours la même structure (une tuile = une appli)."
+      ]
+    },
+    {
+      "v": "2026.07.04.79",
+      "date": "23/09/2026",
+      "titre": "Écran d'accueil : design premium",
+      "notes": [
+        "🎨 L'écran d'accueil (console Admin) passe en design premium : une couleur en dégradé par famille de modules (Exploitation, Catalogue, Imports, Équipe, Pilotage, Administration), cartes avec relief au survol, date du jour affichée. Toujours en tuiles façon Odoo, juste plus soigné."
+      ]
+    },
     {
       "v": "2026.07.04.78",
       "date": "23/09/2026",
