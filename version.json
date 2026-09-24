@@ -1,7 +1,31 @@
 {
-  "version": "2026.07.04.80",
+  "version": "2026.07.04.83",
   "app": "AJCV Logistique",
   "historique": [
+    {
+      "v": "2026.07.04.83",
+      "date": "24/09/2026",
+      "titre": "Livreur : onglet Carte rétabli et amélioré",
+      "notes": [
+        "🗺️ L'onglet Carte, qui n'était plus accessible dans l'appli Livreur, est de retour. Ajouts : légende des couleurs de statut, bouton pour recentrer sur les livraisons, et point bleu de ta position GPS en direct sur la carte."
+      ]
+    },
+    {
+      "v": "2026.07.04.82",
+      "date": "24/09/2026",
+      "titre": "Portail : Pilotage Budgétaire en ligne",
+      "notes": [
+        "☁️ La tuile « Pilotage Budgétaire » pointe maintenant vers l'appli hébergée en ligne (Railway + Supabase) au lieu du PC local — accessible depuis n'importe où, plus besoin de lancer le serveur soi-même."
+      ]
+    },
+    {
+      "v": "2026.07.04.81",
+      "date": "24/09/2026",
+      "titre": "Portail : tuile Pilotage Budgétaire",
+      "notes": [
+        "💶 Nouvelle tuile « Pilotage Budgétaire » sur le portail, dans la section Pilotage. Ouvre la nouvelle appli de suivi budgétaire (dépôt GitHub séparé, exécutée en local sur le PC) : budget, demandes d'achat/travaux, devis, commandes, factures et paiements."
+      ]
+    },
     {
       "v": "2026.07.04.80",
       "date": "23/09/2026",
